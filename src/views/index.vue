@@ -4,8 +4,8 @@
     <div class="main-content">
       <!-- 欢迎区域 -->
       <div class="welcome-section">
-        <h1>物联网平台控制中心</h1>
-        <p>监控和管理您的所有物联网设备与数据</p>
+        <h1>数采平台控制中心</h1>
+        <p>监控和管理您的所有数采设备与数据</p>
         <div class="status-indicator">
           <div class="pulse"></div>
           <span>系统运行正常</span>
@@ -14,31 +14,75 @@
 
       <!-- 数据统计卡片 -->
       <div class="stats-grid">
-        <div class="stat-card" v-for="stat in stats" :key="stat.title" :class="stat.type">
+        <div
+          class="stat-card"
+          v-for="stat in stats"
+          :key="stat.title"
+          :class="stat.type"
+        >
           <div class="card-glow"></div>
           <div class="card-content">
             <div>
-              <img v-if="stat.type==='products'" :src="require('@/assets/images/product.svg')" alt="图标" class="stat-icon">
-              <img v-if="stat.type==='devices'" :src="require('@/assets/images/device.svg')" alt="图标" class="stat-icon">
-              <img v-if="stat.type==='components'" :src="require('@/assets/images/component.svg')" alt="图标" class="stat-icon">
-              <img v-if="stat.type==='protocols'" :src="require('@/assets/images/protocol.svg')" alt="图标" class="stat-icon">
-              <img v-if="stat.type==='messages'" :src="require('@/assets/images/message.svg')" alt="图标" class="stat-icon">
+              <img
+                v-if="stat.type === 'products'"
+                :src="require('@/assets/images/product.svg')"
+                alt="图标"
+                class="stat-icon"
+              />
+              <img
+                v-if="stat.type === 'devices'"
+                :src="require('@/assets/images/device.svg')"
+                alt="图标"
+                class="stat-icon"
+              />
+              <img
+                v-if="stat.type === 'components'"
+                :src="require('@/assets/images/component.svg')"
+                alt="图标"
+                class="stat-icon"
+              />
+              <img
+                v-if="stat.type === 'protocols'"
+                :src="require('@/assets/images/protocol.svg')"
+                alt="图标"
+                class="stat-icon"
+              />
+              <img
+                v-if="stat.type === 'messages'"
+                :src="require('@/assets/images/message.svg')"
+                alt="图标"
+                class="stat-icon"
+              />
             </div>
             <div class="stat-info">
               <h3>{{ stat.title }}</h3>
-              <div class="stat-value" v-if="stat.type==='products'">{{ totalData.productCount || 0 }}</div>
-              <div class="stat-value" v-if="stat.type==='devices'">{{ totalData.deviceCount || 0 }}</div>
-              <div class="stat-value" v-if="stat.type==='components'">{{ totalData.componentCount || 0 }}</div>
-              <div class="stat-value" v-if="stat.type==='protocols'">{{ totalData.protocolCount || 0 }}</div>
-              <div class="stat-value" v-if="stat.type==='messages'">{{ totalData.todayMessageCount || 0 }}</div>
+              <div class="stat-value" v-if="stat.type === 'products'">
+                {{ totalData.productCount || 0 }}
+              </div>
+              <div class="stat-value" v-if="stat.type === 'devices'">
+                {{ totalData.deviceCount || 0 }}
+              </div>
+              <div class="stat-value" v-if="stat.type === 'components'">
+                {{ totalData.componentCount || 0 }}
+              </div>
+              <div class="stat-value" v-if="stat.type === 'protocols'">
+                {{ totalData.protocolCount || 0 }}
+              </div>
+              <div class="stat-value" v-if="stat.type === 'messages'">
+                {{ totalData.todayMessageCount || 0 }}
+              </div>
               <div v-if="stat.type === 'devices'" class="device-details">
                 <div class="detail-item">
                   <span class="label">在线</span>
-                  <span class="value online">{{ totalData.deviceOnlineCount || 0 }}</span>
+                  <span class="value online">{{
+                    totalData.deviceOnlineCount || 0
+                  }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="label">离线</span>
-                  <span class="value offline">{{ totalData.deviceOfflineCount || 0 }}</span>
+                  <span class="value offline">{{
+                    totalData.deviceOfflineCount || 0
+                  }}</span>
                 </div>
               </div>
               <div v-else class="stat-trend">
@@ -138,13 +182,26 @@
             <h2>最新告警</h2>
           </div>
           <div class="warn-list">
-            <div v-for="(warn, index) in warnRecord" :key="index" class="warn-item"   @click="toDeviceWarnPage(warn.belongSn)" style="cursor: pointer">
+            <div
+              v-for="(warn, index) in warnRecord"
+              :key="index"
+              class="warn-item"
+              @click="toDeviceWarnPage(warn.belongSn)"
+              style="cursor: pointer"
+            >
               <div class="warn-main">
                 <div class="warn-title-time">
-                  <span class="warn-name">{{ warn.configName }}（{{warn.belongSn}}）</span>
-                  <span class="warn-date">{{ formatDate(warn.createTime) }}</span>
+                  <span class="warn-name"
+                    >{{ warn.configName }}（{{ warn.belongSn }}）</span
+                  >
+                  <span class="warn-date">{{
+                    formatDate(warn.createTime)
+                  }}</span>
                 </div>
-                <span class="warn-level-tag" :class="getLevelType(warn.warnLevel)">
+                <span
+                  class="warn-level-tag"
+                  :class="getLevelType(warn.warnLevel)"
+                >
                   {{ getLevelText(warn.warnLevel) }}
                 </span>
               </div>
@@ -169,11 +226,21 @@
           <div class="server-info" v-if="serverData">
             <div class="info-row">
               <span class="info-label">服务器信息：</span>
-              <span class="info-value">{{ serverData.sys.computerName }} ({{ serverData.sys.computerIp }}) - {{ serverData.sys.osName }} {{ serverData.sys.osArch }}</span>
+              <span class="info-value"
+                >{{ serverData.sys.computerName }} ({{
+                  serverData.sys.computerIp
+                }}) - {{ serverData.sys.osName }}
+                {{ serverData.sys.osArch }}</span
+              >
             </div>
             <div class="info-row">
               <span class="info-label">JVM信息：</span>
-              <span class="info-value">{{ serverData.jvm.name }} {{ serverData.jvm.version }} (运行时长：{{ serverData.jvm.runTime }})</span>
+              <span class="info-value"
+                >{{ serverData.jvm.name }}
+                {{ serverData.jvm.version }} (运行时长：{{
+                  serverData.jvm.runTime
+                }})</span
+              >
             </div>
           </div>
 
@@ -182,33 +249,52 @@
             <!-- CPU使用率 -->
             <div class="metric" v-if="serverData">
               <div class="metric-info">
-                <span class="label">CPU使用率 ({{ serverData.cpu.cpuNum }}核)</span>
-                <span class="value">{{ serverData.cpu.used+serverData.cpu.sys }}%</span>
+                <span class="label"
+                  >CPU使用率 ({{ serverData.cpu.cpuNum }}核)</span
+                >
+                <span class="value"
+                  >{{ serverData.cpu.used + serverData.cpu.sys }}%</span
+                >
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: (serverData.cpu.used+serverData.cpu.sys) + '%' }"></div>
+                <div
+                  class="progress-fill"
+                  :style="{
+                    width: serverData.cpu.used + serverData.cpu.sys + '%',
+                  }"
+                ></div>
               </div>
             </div>
 
             <!-- 内存使用率 -->
             <div class="metric" v-if="serverData">
               <div class="metric-info">
-                <span class="label">物理内存使用率 (总{{ serverData.mem.total }}GB)</span>
+                <span class="label"
+                  >物理内存使用率 (总{{ serverData.mem.total }}GB)</span
+                >
                 <span class="value">{{ serverData.mem.usage }}%</span>
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: serverData.mem.usage + '%' }"></div>
+                <div
+                  class="progress-fill"
+                  :style="{ width: serverData.mem.usage + '%' }"
+                ></div>
               </div>
             </div>
 
             <!-- JVM内存使用率 -->
             <div class="metric" v-if="serverData">
               <div class="metric-info">
-                <span class="label">JVM内存使用率 (最大{{ serverData.jvm.max }}MB)</span>
+                <span class="label"
+                  >JVM内存使用率 (最大{{ serverData.jvm.max }}MB)</span
+                >
                 <span class="value">{{ serverData.jvm.usage }}%</span>
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: serverData.jvm.usage + '%' }"></div>
+                <div
+                  class="progress-fill"
+                  :style="{ width: serverData.jvm.usage + '%' }"
+                ></div>
               </div>
             </div>
 
@@ -216,13 +302,26 @@
             <div class="disk-section" v-if="serverData">
               <h4 class="disk-title">磁盘分区</h4>
               <div class="disk-list">
-                <div v-for="(disk, index) in serverData.sysFiles" :key="index" class="metric disk-metric">
+                <div
+                  v-for="(disk, index) in serverData.sysFiles"
+                  :key="index"
+                  class="metric disk-metric"
+                >
                   <div class="metric-info">
-                    <span class="label">{{ disk.dirName }} ({{ disk.typeName }})</span>
-                    <span class="value">{{ disk.usage }}% (已用{{ disk.used }}/总{{ disk.total }})</span>
+                    <span class="label"
+                      >{{ disk.dirName }} ({{ disk.typeName }})</span
+                    >
+                    <span class="value"
+                      >{{ disk.usage }}% (已用{{ disk.used }}/总{{
+                        disk.total
+                      }})</span
+                    >
                   </div>
                   <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: disk.usage + '%' }"></div>
+                    <div
+                      class="progress-fill"
+                      :style="{ width: disk.usage + '%' }"
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -236,11 +335,11 @@
 
 <script>
 import { indexStatics } from "@/api/business/product";
-import { listWarnRecord } from '@/api/business/warnRecord';
-import {getServer} from "@/api/monitor/server";
-import {getDeviceBySn} from "@/api/business/device";
+import { listWarnRecord } from "@/api/business/warnRecord";
+import { getServer } from "@/api/monitor/server";
+import { getDeviceBySn } from "@/api/business/device";
 export default {
-  name: 'IoTDashboard',
+  name: "IoTDashboard",
   created() {
     this.getIndexStatics();
     this.getWarnRecord();
@@ -250,164 +349,168 @@ export default {
     return {
       stats: [
         {
-          title: '产品总数',
-          value: '24',
-          type: 'products',
-          icon: 'fas fa-cube',
-          trend: 12
+          title: "产品总数",
+          value: "24",
+          type: "products",
+          icon: "fas fa-cube",
+          trend: 12,
         },
         {
-          title: '设备总数',
-          value: '156',
-          type: 'devices',
-          icon: 'fas fa-microchip',
-          online: '142',
-          offline: '14'
+          title: "设备总数",
+          value: "156",
+          type: "devices",
+          icon: "fas fa-microchip",
+          online: "142",
+          offline: "14",
         },
         {
-          title: '组件数量',
-          value: '8',
-          type: 'components',
-          icon: 'fas fa-puzzle-piece',
-          trend: 5
+          title: "组件数量",
+          value: "8",
+          type: "components",
+          icon: "fas fa-puzzle-piece",
+          trend: 5,
         },
         {
-          title: '协议数量',
-          value: '12',
-          type: 'protocols',
-          icon: 'fas fa-file-contract',
-          trend: 8
+          title: "协议数量",
+          value: "12",
+          type: "protocols",
+          icon: "fas fa-file-contract",
+          trend: 8,
         },
         {
-          title: '今日消息',
-          value: '3,247',
-          type: 'messages',
-          icon: 'fas fa-bell',
-          trend: 15
-        }
+          title: "今日消息",
+          value: "3,247",
+          type: "messages",
+          icon: "fas fa-bell",
+          trend: 15,
+        },
       ],
       steps: [
         {
-          title: '创建产品',
-          description: '在平台中创建产品定义，设置产品属性和功能'
+          title: "创建产品",
+          description: "在平台中创建产品定义，设置产品属性和功能",
         },
         {
-          title: '添加设备',
-          description: '为产品添加具体设备，设置设备独有配置'
+          title: "添加设备",
+          description: "为产品添加具体设备，设置设备独有配置",
         },
         {
-          title: '配置组件',
-          description: '设置设备连接的网络组件和通信协议'
+          title: "配置组件",
+          description: "设置设备连接的网络组件和通信协议",
         },
         {
-          title: '设备接入',
-          description: '设备通过组件连接到平台，开始上报数据'
+          title: "设备接入",
+          description: "设备通过组件连接到平台，开始上报数据",
         },
         {
-          title: '数据处理',
-          description: '平台解析设备数据，存储并触发相关规则'
-        }
+          title: "数据处理",
+          description: "平台解析设备数据，存储并触发相关规则",
+        },
       ],
       activities: [
         {
-          type: 'device',
-          icon: 'fas fa-microchip',
+          type: "device",
+          icon: "fas fa-microchip",
           message: '新设备 "智能温控器-023" 已成功接入平台',
-          time: '10分钟前',
-          status: 'success',
-          statusText: '成功'
+          time: "10分钟前",
+          status: "success",
+          statusText: "成功",
         },
         {
-          type: 'alert',
-          icon: 'fas fa-exclamation-triangle',
+          type: "alert",
+          icon: "fas fa-exclamation-triangle",
           message: '设备 "环境监测-015" 触发温度预警',
-          time: '25分钟前',
-          status: 'warning',
-          statusText: '警告'
+          time: "25分钟前",
+          status: "warning",
+          statusText: "警告",
         },
         {
-          type: 'message',
-          icon: 'fas fa-envelope',
-          message: '今日已接收 3,247 条设备消息',
-          time: '1小时前',
-          status: 'info',
-          statusText: '信息'
+          type: "message",
+          icon: "fas fa-envelope",
+          message: "今日已接收 3,247 条设备消息",
+          time: "1小时前",
+          status: "info",
+          statusText: "信息",
         },
         {
-          type: 'product',
-          icon: 'fas fa-cube',
+          type: "product",
+          icon: "fas fa-cube",
           message: '新产品 "智能安防套装" 已创建',
-          time: '2小时前',
-          status: 'success',
-          statusText: '成功'
-        }
+          time: "2小时前",
+          status: "success",
+          statusText: "成功",
+        },
       ],
       totalData: {},
       warnRecord: [],
-      serverData: null // 存储服务器状态数据
-    }
+      serverData: null, // 存储服务器状态数据
+    };
   },
   methods: {
     formatDate(dateString) {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      const seconds = String(date.getSeconds()).padStart(2, '0')
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
 
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     getLevelType(level) {
       const typeMap = {
-        '1': 'danger',     // 紧急 - 红色
-        '2': 'warning',    // 严重 - 橙色
-        '3': 'normal',     // 警告 - 蓝色
-        '4': 'success'     // 正常 - 绿色
+        1: "danger", // 紧急 - 红色
+        2: "warning", // 严重 - 橙色
+        3: "normal", // 警告 - 蓝色
+        4: "success", // 正常 - 绿色
       };
-      return typeMap[level] || 'info';
+      return typeMap[level] || "info";
     },
     getLevelText(level) {
       const textMap = {
-        '1': '紧急',
-        '2': '严重',
-        '3': '警告',
-        '4': '正常'
+        1: "紧急",
+        2: "严重",
+        3: "警告",
+        4: "正常",
       };
-      return textMap[level] || '未知';
+      return textMap[level] || "未知";
     },
     getIndexStatics() {
-      indexStatics().then(res => {
-        if (res?.code != 200) {
+      indexStatics()
+        .then((res) => {
+          if (res?.code != 200) {
+            this.$message.error("统计数据获取失败");
+          } else {
+            this.totalData = res?.data;
+          }
+        })
+        .catch((err) => {
+          console.error("获取统计数据失败:", err);
           this.$message.error("统计数据获取失败");
-        } else {
-          this.totalData = res?.data
-        }
-      }).catch(err => {
-        console.error('获取统计数据失败:', err);
-        this.$message.error("统计数据获取失败");
-      })
+        });
     },
     getWarnRecord() {
-      listWarnRecord().then(res => {
-        if (res?.code != 200) {
-          this.$message.error("数据获取失败");
-        } else {
-          this.warnRecord = res?.rows
-        }
-      }).catch(err => {
-        console.error('获取告警数据失败:', err);
-        this.$message.error("告警数据获取失败");
-      })
+      listWarnRecord()
+        .then((res) => {
+          if (res?.code != 200) {
+            this.$message.error("数据获取失败");
+          } else {
+            this.warnRecord = res?.rows;
+          }
+        })
+        .catch((err) => {
+          console.error("获取告警数据失败:", err);
+          this.$message.error("告警数据获取失败");
+        });
     },
     // 模拟获取服务器状态的接口请求
     getServerStatus() {
       // 模拟接口延迟（模拟网络请求）
-      getServer().then(res=>{
+      getServer().then((res) => {
         this.serverData = res.data;
-      })
+      });
     },
     particleStyle(index) {
       const size = Math.random() * 6 + 2;
@@ -420,26 +523,26 @@ export default {
         height: `${size}px`,
         left: `${left}%`,
         animationDuration: `${duration}s`,
-        animationDelay: `${delay}s`
+        animationDelay: `${delay}s`,
       };
     },
-    toDeviceWarnPage(deviceSn){
-      getDeviceBySn(deviceSn).then(res=>{
-        if(res?.code==200){
+    toDeviceWarnPage(deviceSn) {
+      getDeviceBySn(deviceSn).then((res) => {
+        if (res?.code == 200) {
           this.$router.push({
-            path: '/deviceManage/device/detail/index',
+            path: "/deviceManage/device/detail/index",
             query: {
               id: res?.data.id,
-              toPage: 'alarmRecord'
-            }
+              toPage: "alarmRecord",
+            },
           });
-        }else {
+        } else {
           this.$message.warning(res?.msg);
         }
-      })
-    }
-  }
-}
+      });
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -447,7 +550,7 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
@@ -629,13 +732,15 @@ body {
   overflow: hidden;
   border: 1px solid #e2e8f0;
   transition: all 0.3s;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .stat-card:hover {
   transform: translateY(-5px);
   border-color: #3b82f6;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .card-glow {
@@ -644,7 +749,11 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+  background: radial-gradient(
+    circle at center,
+    rgba(59, 130, 246, 0.05) 0%,
+    transparent 70%
+  );
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -760,7 +869,8 @@ body {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .card-header {
@@ -1029,7 +1139,8 @@ body {
   border-radius: 16px;
   padding: 24px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .warn-list {

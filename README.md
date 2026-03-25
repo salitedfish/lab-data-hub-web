@@ -2,10 +2,10 @@
 
 ```bash
 # 克隆项目
-git clone https://gitee.com/y_project/RuoYi-Vue
+git clone https://gitee.com/yinlunxx/lab-data-hub-web.git
 
 # 进入项目目录
-cd ruoyi-ui
+cd lab-data-hub-web
 
 # 安装依赖
 npm install
@@ -15,9 +15,9 @@ npm install --registry=https://registry.npmmirror.com
 
 # 启动服务
 npm run dev
-```
 
-浏览器访问 http://localhost:80
+
+浏览器访问 http://localhost:8888
 
 ## 发布
 
@@ -27,4 +27,3 @@ npm run build:stage
 
 # 构建生产环境
 npm run build:prod
-```
