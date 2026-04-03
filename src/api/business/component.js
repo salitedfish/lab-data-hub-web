@@ -46,8 +46,17 @@ export function delComponent(id) {
 // 修改网络组件
 export function control(data) {
   return request({
-    url: '/business/component/control?id='+data.id+"&status="+data.status,
+    url: '/business/component/control?id=' + data.id + "&status=" + data.status,
     method: 'put',
     data: {}
+  })
+}
+
+// 获取数据库表列表
+export function getTableList(data) {
+  return request({
+    url: '/business/component/listAllTables',
+    method: 'post',
+    data: data
   })
 }

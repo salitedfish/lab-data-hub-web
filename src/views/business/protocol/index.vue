@@ -1,6 +1,13 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
+    <el-form
+      :model="queryParams"
+      ref="queryForm"
+      size="small"
+      :inline="true"
+      v-show="showSearch"
+      label-width="68px"
+    >
       <el-form-item label="协议名称" prop="protocolName">
         <el-input
           v-model="queryParams.protocolName"
@@ -10,8 +17,16 @@
         />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+        <el-button
+          type="primary"
+          icon="el-icon-search"
+          size="mini"
+          @click="handleQuery"
+          >搜索</el-button
+        >
+        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery"
+          >重置</el-button
+        >
       </el-form-item>
     </el-form>
 
@@ -24,15 +39,21 @@
           size="mini"
           @click="handleAdd"
           v-hasPermi="['business:protocol:add']"
-        >新增
+          >新增
         </el-button>
       </el-col>
-      <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
+      <right-toolbar
+        :showSearch.sync="showSearch"
+        @queryTable="getList"
+      ></right-toolbar>
     </el-row>
 
     <!-- 卡片展示区域 -->
     <div class="protocol-card-container">
-      <el-checkbox-group v-model="selectedCards" @change="handleCardSelectionChange">
+      <el-checkbox-group
+        v-model="selectedCards"
+        @change="handleCardSelectionChange"
+      >
         <el-row :gutter="15">
           <el-col
             v-for="(item, index) in protocolList"
@@ -43,51 +64,61 @@
             :lg="4"
             class="card-col"
           >
-              <el-card class="protocol-card" shadow="hover">
-                <div slot="header" class="card-header">
-                  <h4 class="protocol-name">{{ item.protocolName || '未知协议' }}</h4>
+            <el-card class="protocol-card" shadow="hover">
+              <div slot="header" class="card-header">
+                <h4 class="protocol-name">
+                  {{ item.protocolName || "未知协议" }}
+                </h4>
+              </div>
+              <div class="card-content">
+                <div class="card-item">
+                  <i class="el-icon-folder"></i>
+                  <span class="value">{{ item.localUrl || "未设置路径" }}</span>
                 </div>
-                <div class="card-content">
-                  <div class="card-item">
-                    <i class="el-icon-folder"></i>
-                    <span class="value">{{ item.localUrl || '未设置路径' }}</span>
-                  </div>
-                  <div class="card-item">
-                    <i class="el-icon-cpu"></i>
-                    <span class="value">{{ item.mainClassPath || '未设置入口类' }}</span>
-                  </div>
-                  <div class="card-item">
-                    <i class="el-icon-document"></i>
-                    <span class="value">{{ item.originName || '未设置原始名称' }}</span>
-                  </div>
-                  <div class="card-item">
-                    <i class="el-icon-edit-outline"></i>
-                    <span class="value">{{ item.newName || '未设置新名称' }}</span>
-                  </div>
-                  <div class="card-item">
-                    <i class="el-icon-collection-tag"></i>
-                    <span class="value">{{ item.type === 0 ? 'JAR包' : '其他类型' }}</span>
-                  </div>
+                <div class="card-item">
+                  <i class="el-icon-cpu"></i>
+                  <span class="value">{{
+                    item.mainClassPath || "未设置入口类"
+                  }}</span>
                 </div>
-                <div class="card-actions">
-                  <el-button
-                    size="mini"
-                    class="action-btn edit-btn"
-                    icon="el-icon-edit"
-                    @click.stop="handleUpdate(item)"
-                    v-hasPermi="['business:protocol:edit']"
+                <div class="card-item">
+                  <i class="el-icon-document"></i>
+                  <span class="value">{{
+                    item.originName || "未设置原始名称"
+                  }}</span>
+                </div>
+                <div class="card-item">
+                  <i class="el-icon-edit-outline"></i>
+                  <span class="value">{{
+                    item.newName || "未设置新名称"
+                  }}</span>
+                </div>
+                <div class="card-item">
+                  <i class="el-icon-collection-tag"></i>
+                  <span class="value">{{
+                    item.type === 0 ? "JAR包" : "其他类型"
+                  }}</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <el-button
+                  size="mini"
+                  class="action-btn edit-btn"
+                  icon="el-icon-edit"
+                  @click.stop="handleUpdate(item)"
+                  v-hasPermi="['business:protocol:edit']"
                   >修改
-                  </el-button>
-                  <el-button
-                    size="mini"
-                    class="action-btn delete-btn"
-                    icon="el-icon-delete"
-                    @click.stop="handleDelete(item)"
-                    v-hasPermi="['business:protocol:remove']"
+                </el-button>
+                <el-button
+                  size="mini"
+                  class="action-btn delete-btn"
+                  icon="el-icon-delete"
+                  @click.stop="handleDelete(item)"
+                  v-hasPermi="['business:protocol:remove']"
                   >删除
-                  </el-button>
-                </div>
-              </el-card>
+                </el-button>
+              </div>
+            </el-card>
           </el-col>
         </el-row>
       </el-checkbox-group>
@@ -95,7 +126,7 @@
 
     <div class="pagination-wrapper">
       <pagination
-        v-show="total>0"
+        v-show="total > 0"
         :total="total"
         :page-sizes="[12, 24, 48, 96]"
         :page.sync="queryParams.pageNum"
@@ -116,7 +147,10 @@
       <div class="drawer-content">
         <el-form ref="form" :model="form" :rules="rules" label-width="120px">
           <el-form-item label="协议名称" prop="protocolName" required>
-            <el-input v-model="form.protocolName" placeholder="请输入协议名称"/>
+            <el-input
+              v-model="form.protocolName"
+              placeholder="请输入协议名称"
+            />
           </el-form-item>
           <el-form-item label="类型" prop="type" required>
             <el-select v-model="form.type" placeholder="请选择类型">
@@ -131,8 +165,17 @@
               <el-option label="UDP_SERVER" value="UDP_SERVER"></el-option>
               <el-option label="COAP_SERVER" value="COAP_SERVER"></el-option>
               <el-option label="HTTP_SERVER" value="HTTP_SERVER"></el-option>
-              <el-option label="WEBSOCKET_SERVER" value="WEBSOCKET_SERVER"></el-option>
+              <el-option
+                label="WEBSOCKET_SERVER"
+                value="WEBSOCKET_SERVER"
+              ></el-option>
               <el-option label="MODBUS_TCP" value="MODBUS_TCP"></el-option>
+              <el-option label="S71200_TCP" value="S71200_TCP"></el-option>
+              <el-option
+                label="OMRONFINS_TCP"
+                value="OMRONFINS_TCP"
+              ></el-option>
+              <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="上传JAR包" prop="file">
@@ -146,10 +189,15 @@
               :on-remove="handleRemove"
               action="#"
               :auto-upload="false"
-              multiple>
+              multiple
+            >
               <i class="el-icon-upload"></i>
-              <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-              <div class="el-upload__tip" slot="tip">只能上传JAR文件，且不超过100MB</div>
+              <div class="el-upload__text">
+                将文件拖到此处，或<em>点击上传</em>
+              </div>
+              <div class="el-upload__tip" slot="tip">
+                只能上传JAR文件，且不超过100MB
+              </div>
             </el-upload>
           </el-form-item>
         </el-form>
@@ -163,7 +211,13 @@
 </template>
 
 <script>
-import {listProtocol, getProtocol, delProtocol, addProtocol, updateProtocol} from "@/api/business/protocol"
+import {
+  listProtocol,
+  getProtocol,
+  delProtocol,
+  addProtocol,
+  updateProtocol,
+} from "@/api/business/protocol";
 
 export default {
   name: "Protocol",
@@ -199,31 +253,31 @@ export default {
         originName: null,
         protocolType: null,
         type: null,
-        newName: null
+        newName: null,
       },
       // 表单参数
       form: {},
       // 表单校验
-      rules: {}
-    }
+      rules: {},
+    };
   },
   created() {
-    this.getList()
+    this.getList();
   },
   methods: {
     /** 查询协议管理列表 */
     getList() {
-      this.loading = true
-      listProtocol(this.queryParams).then(response => {
-        this.protocolList = response.rows
-        this.total = response.total
-        this.loading = false
-      })
+      this.loading = true;
+      listProtocol(this.queryParams).then((response) => {
+        this.protocolList = response.rows;
+        this.total = response.total;
+        this.loading = false;
+      });
     },
     // 取消按钮
     cancel() {
-      this.open = false
-      this.reset()
+      this.open = false;
+      this.reset();
     },
     // 表单重置
     reset() {
@@ -234,45 +288,45 @@ export default {
         mainClassPath: null,
         originName: null,
         type: null,
-        newName: null
-      }
-      this.resetForm("form")
+        newName: null,
+      };
+      this.resetForm("form");
     },
     /** 搜索按钮操作 */
     handleQuery() {
-      this.queryParams.pageNum = 1
-      this.getList()
+      this.queryParams.pageNum = 1;
+      this.getList();
     },
     /** 重置按钮操作 */
     resetQuery() {
-      this.resetForm("queryForm")
-      this.handleQuery()
+      this.resetForm("queryForm");
+      this.handleQuery();
     },
     // 卡片选择变化
     handleCardSelectionChange(selection) {
-      this.ids = selection
-      this.single = selection.length !== 1
-      this.multiple = !selection.length
+      this.ids = selection;
+      this.single = selection.length !== 1;
+      this.multiple = !selection.length;
     },
     /** 新增按钮操作 */
     handleAdd() {
-      this.reset()
-      this.open = true
-      this.title = "添加协议管理"
+      this.reset();
+      this.open = true;
+      this.title = "添加协议管理";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
-      this.reset()
-      const id = row.id || this.ids[0]
-      getProtocol(id).then(response => {
-        this.form = response.data
-        this.open = true
-        this.title = "修改协议管理"
-      })
+      this.reset();
+      const id = row.id || this.ids[0];
+      getProtocol(id).then((response) => {
+        this.form = response.data;
+        this.open = true;
+        this.title = "修改协议管理";
+      });
     },
     /** 提交按钮 */
     submitForm() {
-      this.$refs["form"].validate(valid => {
+      this.$refs["form"].validate((valid) => {
         if (valid) {
           if (this.form.id != null) {
             const formData = new FormData();
@@ -284,11 +338,11 @@ export default {
                 formData.append(key, this.form[key]);
               }
             }
-            updateProtocol(formData).then(response => {
-              this.$modal.msgSuccess("修改成功")
-              this.open = false
-              this.getList()
-            })
+            updateProtocol(formData).then((response) => {
+              this.$modal.msgSuccess("修改成功");
+              this.open = false;
+              this.getList();
+            });
           } else {
             const formData = new FormData();
             formData.append("protocolFile", this.form.protocolFile);
@@ -299,50 +353,57 @@ export default {
                 formData.append(key, this.form[key]);
               }
             }
-            addProtocol(formData).then(response => {
-              this.$modal.msgSuccess("新增成功")
-              this.open = false
-              this.getList()
-            })
+            addProtocol(formData).then((response) => {
+              this.$modal.msgSuccess("新增成功");
+              this.open = false;
+              this.getList();
+            });
           }
         }
-      })
+      });
     },
     /** 删除按钮操作 */
     handleDelete(row) {
-      const ids = row.id || this.ids
-      this.$modal.confirm('是否确认删除协议管理编号为"' + ids + '"的数据项？').then(function () {
-        return delProtocol(ids)
-      }).then(() => {
-        this.getList()
-        this.selectedCards = []
-        this.$modal.msgSuccess("删除成功")
-      }).catch(() => {
-      })
+      const ids = row.id || this.ids;
+      this.$modal
+        .confirm('是否确认删除协议管理编号为"' + ids + '"的数据项？')
+        .then(function () {
+          return delProtocol(ids);
+        })
+        .then(() => {
+          this.getList();
+          this.selectedCards = [];
+          this.$modal.msgSuccess("删除成功");
+        })
+        .catch(() => {});
     },
     /** 导出按钮操作 */
     handleExport() {
-      this.download('business/protocol/export', {
-        ...this.queryParams
-      }, `protocol_${new Date().getTime()}.xlsx`)
+      this.download(
+        "business/protocol/export",
+        {
+          ...this.queryParams,
+        },
+        `protocol_${new Date().getTime()}.xlsx`
+      );
     },
     handleChange(file, fileList) {
       // file 参数就是当前变化的文件对象
-      this.form.protocolFile = file.raw  // 获取原始文件对象
+      this.form.protocolFile = file.raw; // 获取原始文件对象
     },
     handleExceed(files, fileList) {
       // 当超过限制时，用新文件替换旧文件
-      this.fileList = [files[0]] // 只保留最新选择的文件
-      this.form.protocolFile = files[0] // 更新表单数据
+      this.fileList = [files[0]]; // 只保留最新选择的文件
+      this.form.protocolFile = files[0]; // 更新表单数据
     },
 
     handleRemove(file, fileList) {
       // 文件被移除时的处理
-      this.fileList = fileList
-      this.form.protocolFile = null
-    }
-  }
-}
+      this.fileList = fileList;
+      this.form.protocolFile = null;
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -392,13 +453,18 @@ export default {
 }
 
 .protocol-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(103, 194, 58, 0.15) 0%, rgba(103, 194, 58, 0.05) 20%, rgba(103, 194, 58, 0) 40%);
+  background: linear-gradient(
+    135deg,
+    rgba(103, 194, 58, 0.15) 0%,
+    rgba(103, 194, 58, 0.05) 20%,
+    rgba(103, 194, 58, 0) 40%
+  );
   pointer-events: none;
   z-index: 1;
 }
@@ -538,9 +604,9 @@ export default {
 }
 
 ::v-deep .el-pagination .number.active {
-  background: #409EFF;
+  background: #409eff;
   color: #fff;
-  border-color: #409EFF;
+  border-color: #409eff;
 }
 
 /* 抽屉样式 */

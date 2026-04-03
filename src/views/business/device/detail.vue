@@ -8,7 +8,9 @@
           <span class="device-model">{{ device.deviceSn }}</span>
         </div>
         <el-switch
-          v-model="device.status==1"
+          v-model="device.status"
+          :active-value="'1'"
+          :inactive-value="'0'"
           active-text="在线"
           inactive-text="离线"
           active-color="#13ce66"
@@ -39,7 +41,11 @@
             </div>
           </div>
         </el-col>
-        <el-col :xs="12" :sm="6" v-if="component && component.netType=='MODBUS_TCP'">
+        <el-col
+          :xs="12"
+          :sm="6"
+          v-if="component && component.netType == 'MODBUS_TCP'"
+        >
           <div class="stat-item">
             <div class="stat-icon">
               <i class="el-icon-setting"></i>
@@ -47,12 +53,15 @@
             <div class="stat-content">
               <div class="stat-label">从站ID</div>
               <!-- 核心：点击文本切换输入框，输入后保存 -->
-              <div class="stat-value edit-item" @click="toggleSlaveIdEdit(true)">
+              <div
+                class="stat-value edit-item"
+                @click="toggleSlaveIdEdit(true)"
+              >
                 <!-- 显示文本状态 -->
                 <span v-if="!isEditingSlaveId">
-              {{ device.slaveId || '未设置' }}
-              <i class="el-icon-edit-outline edit-icon"></i>
-            </span>
+                  {{ device.slaveId || "未设置" }}
+                  <i class="el-icon-edit-outline edit-icon"></i>
+                </span>
                 <!-- 输入框编辑状态 -->
                 <el-input
                   v-else
@@ -76,13 +85,19 @@
 
     <!-- 底部Tab切换区域 -->
     <el-card class="tab-card" shadow="hover">
-      <el-tabs v-model="activeTab" @tab-click="handleTabClick" class="custom-tabs">
+      <el-tabs
+        v-model="activeTab"
+        @tab-click="handleTabClick"
+        class="custom-tabs"
+      >
         <!-- 实时数据部分 -->
         <el-tab-pane label="实时数据" name="realData">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">实时数据</div>
-              <el-button type="primary" @click="openHistoryData">历史数据</el-button>
+              <el-button type="primary" @click="openHistoryData"
+                >历史数据</el-button
+              >
             </div>
             <!-- 属性卡片网格 -->
             <div class="property-cards-grid">
@@ -93,7 +108,9 @@
               >
                 <div class="property-name">{{ property.name }}</div>
                 <div class="property-value">
-                  <span class="value">{{ property.value || '--' }}{{property.unit}}</span>
+                  <span class="value"
+                    >{{ property.value || "--" }}{{ property.unit }}</span
+                  >
                 </div>
                 <div class="property-time">{{ property.updateTime }}</div>
               </div>
@@ -106,8 +123,20 @@
             <div class="tab-header">
               <div class="tab-title">物模型管理</div>
               <div class="tab-actions">
-                <el-button type="primary" icon="el-icon-plus" class="action-btn" @click="addThingModel">添加属性</el-button>
-                <el-button type="primary" icon="el-icon-plus" class="action-btn" @click="saveThingModel">全部保存</el-button>
+                <el-button
+                  type="primary"
+                  icon="el-icon-plus"
+                  class="action-btn"
+                  @click="addThingModel"
+                  >添加属性</el-button
+                >
+                <el-button
+                  type="primary"
+                  icon="el-icon-plus"
+                  class="action-btn"
+                  @click="saveThingModel"
+                  >全部保存</el-button
+                >
               </div>
             </div>
 
@@ -187,111 +216,111 @@
                     type="danger"
                     @click="deleteThingModel(scope.$index)"
                     class="table-action"
-                  >删除</el-button>
+                    >删除</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="Modbus配置" name="modbusConfig" v-if="component?.netType=='MODBUS_TCP'">
-          <div class="tab-content">
-            <div class="tab-header">
-              <div class="tab-title">Modbus配置</div>
-              <div class="tab-tip" v-if="component?.netType!=='MODBUS_TCP'">注：当且仅当设备类型为modbus时,该项配置才会生效。</div>
-              <div class="tab-actions" style="right: 20px">
-              <span style="font-weight: 800;align-items: center; gap: 4px;">
-                <!-- 感叹号图标 + 悬浮提示 -->
-                <el-tooltip
-                  class="item"
-                  effect="dark"
-                  :content="'修改定时配置或修改从站ID都需要关闭再开启才会生效'"
-                  placement="top"
-                >
-                  <i
-                    class="el-icon-warning"
-                    style="color: #a2a2a2; font-size: 14px; cursor: pointer;"
-                  ></i>
-                </el-tooltip>
-                {{ modbusEnabled ? '定时读取已开启' : '定时读取已关闭' }}
-              </span>
-                <el-switch
-                  v-model="modbusEnabled"
-                  active-text=""
-                  inactive-text=""
-                  active-color="#13ce66"
-                  inactive-color="#ff4949"
-                  @change="handleModbusStatusChange"
-                  class="status-switch"
-                />
-              </div>
-              <div class="tab-actions">
-                <el-button type="primary" icon="el-icon-plus" class="action-btn" @click="addModbusConfig">添加配置</el-button>
-              </div>
-            </div>
-            <div class="filter-bar">
-              <el-form :inline="true" class="filter-form">
-                <el-form-item label="设备名称">
-                  <el-input v-model="modbusParams.code"></el-input>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" icon="el-icon-search" @click="getModbusConfigByDeviceSn" class="search-btn">查询
-                  </el-button>
-                </el-form-item>
-              </el-form>
-            </div>
-            <el-table :data="modbusList" style="width: 100%" class="data-table" stripe>
-              <el-table-column prop="code" label="标识" width="150"/>
-              <el-table-column prop="registerRange" label="寄存器范围" width="180"/>
-              <el-table-column prop="intervalTime" label="读取间隔(s)" width="180"/>
-              <el-table-column prop="delayTime" label="读取后延迟(ms)" width="180"/>
-              <el-table-column label="操作" width="250" fixed="right">
-                <template slot-scope="scope">
-                  <el-button size="mini" icon="el-icon-edit" type="primary" @click="editModbusConfig(scope.row)"
-                             class="table-action">编辑
-                  </el-button>
-                  <el-button size="mini" icon="el-icon-delete" type="danger" @click="deleteModbus(scope.row.id)"
-                             class="table-action">删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-pagination
-              class="pagination"
-              :current-page="modbusParams.pageNum"
-              :page-size="modbusParams.pageSize"
-              :total="modbusParams.total"
-              layout="total, sizes, prev, pager, next, jumper"
-              @current-change="getModbusConfigByDeviceSn"
-            />
-          </div>
+        <el-tab-pane
+          label="Modbus配置"
+          name="modbusConfig"
+          v-if="component?.netType == 'MODBUS_TCP'"
+        >
+          <ModbusConfig :device-sn="device.deviceSn" :enabled="modbusEnabled" />
         </el-tab-pane>
-
+        <el-tab-pane
+          label="S71200_TCP配置"
+          name="s71200TcpConfig"
+          v-if="component?.netType == 'S71200_TCP'"
+        >
+          <S71200TcpConfig
+            :device-sn="device.deviceSn"
+            :enabled="modbusEnabled"
+          />
+        </el-tab-pane>
+        <el-tab-pane
+          label="OMRONFINS_TCP配置"
+          name="omronFinsTcpConfig"
+          v-if="component?.netType == 'OMRONFINS_TCP'"
+        >
+          <OmronFinsTcpConfig
+            :device-sn="device.deviceSn"
+            :enabled="modbusEnabled"
+          />
+        </el-tab-pane>
+        <el-tab-pane
+          label="Database_TCP配置"
+          name="databaseTcpConfig"
+          v-if="component?.netType == 'DATABASE_TCP'"
+        >
+          <DatabaseTcpConfig
+            :device-sn="device.deviceSn"
+            :componentId="device.componentId"
+            :enabled="modbusEnabled"
+          />
+        </el-tab-pane>
 
         <el-tab-pane label="指令下发" name="functionConfig">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">指令下发配置</div>
               <div class="button-group">
-                <el-button type="primary" icon="el-icon-plus" class="action-btn" @click="addFunction">添加指令
+                <el-button
+                  type="primary"
+                  icon="el-icon-plus"
+                  class="action-btn"
+                  @click="addFunction"
+                  >添加指令
                 </el-button>
               </div>
             </div>
-            <el-table :data="functionList" style="width: 100%" class="data-table" stripe>
-              <el-table-column prop="functionName" label="指令名称" width="200"/>
-              <el-table-column prop="functionCode" label="指令编码" width="200"/>
-              <el-table-column prop="functionParams" label="自定义参数" width="200"/>
+            <el-table
+              :data="functionList"
+              style="width: 100%"
+              class="data-table"
+              stripe
+            >
+              <el-table-column
+                prop="functionName"
+                label="指令名称"
+                width="200"
+              />
+              <el-table-column
+                prop="functionCode"
+                label="指令编码"
+                width="200"
+              />
+              <el-table-column
+                prop="functionParams"
+                label="自定义参数"
+                width="200"
+              />
               <el-table-column prop="createTime" label="创建时间">
                 <template slot-scope="scope">
-                  <code class="condition-code">{{ formatDateTime(scope.row.createTime) }}</code>
+                  <code class="condition-code">{{
+                    formatDateTime(scope.row.createTime)
+                  }}</code>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="180" fixed="right">
                 <template slot-scope="scope">
-                  <el-button size="mini" icon="el-icon-edit" @click="editFunction(scope.row)" class="table-action">编辑
+                  <el-button
+                    size="mini"
+                    icon="el-icon-edit"
+                    @click="editFunction(scope.row)"
+                    class="table-action"
+                    >编辑
                   </el-button>
-                  <el-button size="mini" icon="el-icon-delete" type="danger" @click="deleteFunction(scope.row)"
-                             class="table-action">删除
+                  <el-button
+                    size="mini"
+                    icon="el-icon-delete"
+                    type="danger"
+                    @click="deleteFunction(scope.row)"
+                    class="table-action"
+                    >删除
                   </el-button>
                 </template>
               </el-table-column>
@@ -299,21 +328,36 @@
           </div>
 
           <!-- 添加/编辑告警规则弹窗 -->
-          <el-dialog :title="functionIsEditing ? '编辑指令' : '添加指令'" :visible.sync="functionDialogVisible" width="800px">
+          <el-dialog
+            :title="functionIsEditing ? '编辑指令' : '添加指令'"
+            :visible.sync="functionDialogVisible"
+            width="800px"
+          >
             <el-form :model="currentFunction" label-width="100px">
               <el-form-item label="指令名称" required>
-                <el-input v-model="currentFunction.functionName" placeholder="请输入指令名称"></el-input>
+                <el-input
+                  v-model="currentFunction.functionName"
+                  placeholder="请输入指令名称"
+                ></el-input>
               </el-form-item>
               <el-form-item label="指令编码" required>
-                <el-input v-model="currentFunction.functionCode" placeholder="请输入指令编码"></el-input>
+                <el-input
+                  v-model="currentFunction.functionCode"
+                  placeholder="请输入指令编码"
+                ></el-input>
               </el-form-item>
               <el-form-item label="自定义参数">
-                <el-input v-model="currentFunction.functionParams" placeholder="请输入自定义参数"></el-input>
+                <el-input
+                  v-model="currentFunction.functionParams"
+                  placeholder="请输入自定义参数"
+                ></el-input>
               </el-form-item>
             </el-form>
 
             <div slot="footer" class="dialog-footer">
-              <el-button @click="functionDialogVisible = false">取 消</el-button>
+              <el-button @click="functionDialogVisible = false"
+                >取 消</el-button
+              >
               <el-button type="primary" @click="saveFunction">确 定</el-button>
             </div>
           </el-dialog>
@@ -333,12 +377,14 @@
                   <el-select
                     v-model="selectedCommand.id"
                     placeholder="请选择要下发的指令"
-                    style="width: 100%">
+                    style="width: 100%"
+                  >
                     <el-option
                       v-for="item in functionList"
                       :key="item.id"
                       :label="item.functionName"
-                      :value="item.id">
+                      :value="item.id"
+                    >
                     </el-option>
                   </el-select>
                 </div>
@@ -353,7 +399,8 @@
                     :rows="8"
                     placeholder="请输入指令内容，支持 JSON 格式或其他字符串"
                     resize="none"
-                    class="command-textarea">
+                    class="command-textarea"
+                  >
                   </el-input>
                 </div>
               </div>
@@ -364,7 +411,8 @@
                   <el-button
                     type="primary"
                     @click="handleCommandSubmit"
-                    class="submit-btn">
+                    class="submit-btn"
+                  >
                     <i class="el-icon-position"></i>
                     下发指令
                   </el-button>
@@ -373,7 +421,12 @@
             </div>
 
             <!-- 原有的表格 -->
-            <el-table :data="functionList" style="width: 100%" class="data-table" stripe>
+            <el-table
+              :data="functionList"
+              style="width: 100%"
+              class="data-table"
+              stripe
+            >
             </el-table>
           </div>
         </el-tab-pane>
@@ -386,26 +439,56 @@
             <div class="filter-bar">
               <el-form :inline="true" class="filter-form">
                 <el-form-item label="指令编码">
-                  <el-input v-model="functionRecordParams.functionCode"></el-input>
+                  <el-input
+                    v-model="functionRecordParams.functionCode"
+                  ></el-input>
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" icon="el-icon-search" @click="searchFunctionRecord" class="search-btn">查询</el-button>
+                  <el-button
+                    type="primary"
+                    icon="el-icon-search"
+                    @click="searchFunctionRecord"
+                    class="search-btn"
+                    >查询</el-button
+                  >
                 </el-form-item>
               </el-form>
             </div>
-            <el-table :data="functionRecordList" style="width: 100%" class="data-table" stripe>
-              <el-table-column prop="functionName" label="指令名称" width="150" />
-              <el-table-column prop="functionCode" label="指令编码" width="180" />
-              <el-table-column prop="functionParams" label="下发参数" width="150"/>
+            <el-table
+              :data="functionRecordList"
+              style="width: 100%"
+              class="data-table"
+              stripe
+            >
+              <el-table-column
+                prop="functionName"
+                label="指令名称"
+                width="150"
+              />
+              <el-table-column
+                prop="functionCode"
+                label="指令编码"
+                width="180"
+              />
+              <el-table-column
+                prop="functionParams"
+                label="下发参数"
+                width="150"
+              />
               <el-table-column prop="createTime" label="执行时间">
                 <template slot-scope="scope">
-                  <code class="condition-code">{{ formatDateTime(scope.row.createTime) }}</code>
+                  <code class="condition-code">{{
+                    formatDateTime(scope.row.createTime)
+                  }}</code>
                 </template>
               </el-table-column>
               <el-table-column prop="isSuccess" label="执行结果" width="150">
                 <template slot-scope="scope">
-                  <el-tag :type="scope.row.isSuccess === '1' ? 'success' : 'error'" effect="dark">
-                    {{ scope.row.isSuccess === '1' ? '执行成功' : '执行失败' }}
+                  <el-tag
+                    :type="scope.row.isSuccess === '1' ? 'success' : 'error'"
+                    effect="dark"
+                  >
+                    {{ scope.row.isSuccess === "1" ? "执行成功" : "执行失败" }}
                   </el-tag>
                 </template>
               </el-table-column>
@@ -416,21 +499,21 @@
                   </el-tag>
                 </template>
               </el-table-column>
-<!--              <el-table-column label="操作" width="200" fixed="right">-->
-<!--                <template slot-scope="scope">-->
-<!--                  <el-button size="mini" icon="el-icon-view" @click="viewAlarmDetail(scope.row)" class="table-action">详情</el-button>-->
-<!--                  <el-button-->
-<!--                    v-if="scope.row.status !== 'resolved'"-->
-<!--                    size="mini"-->
-<!--                    icon="el-icon-check"-->
-<!--                    type="success"-->
-<!--                    @click="resolveAlarm(scope.row)"-->
-<!--                    class="table-action"-->
-<!--                  >-->
-<!--                    标记处理-->
-<!--                  </el-button>-->
-<!--                </template>-->
-<!--              </el-table-column>-->
+              <!--              <el-table-column label="操作" width="200" fixed="right">-->
+              <!--                <template slot-scope="scope">-->
+              <!--                  <el-button size="mini" icon="el-icon-view" @click="viewAlarmDetail(scope.row)" class="table-action">详情</el-button>-->
+              <!--                  <el-button-->
+              <!--                    v-if="scope.row.status !== 'resolved'"-->
+              <!--                    size="mini"-->
+              <!--                    icon="el-icon-check"-->
+              <!--                    type="success"-->
+              <!--                    @click="resolveAlarm(scope.row)"-->
+              <!--                    class="table-action"-->
+              <!--                  >-->
+              <!--                    标记处理-->
+              <!--                  </el-button>-->
+              <!--                </template>-->
+              <!--              </el-table-column>-->
             </el-table>
             <el-pagination
               class="pagination"
@@ -450,18 +533,35 @@
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">告警规则配置</div>
-              <el-button type="primary" icon="el-icon-plus" class="action-btn" @click="addAlarmRule">添加告警规则</el-button>
+              <el-button
+                type="primary"
+                icon="el-icon-plus"
+                class="action-btn"
+                @click="addAlarmRule"
+                >添加告警规则</el-button
+              >
             </div>
-            <el-table :data="alarmRules" style="width: 100%" class="data-table" stripe>
+            <el-table
+              :data="alarmRules"
+              style="width: 100%"
+              class="data-table"
+              stripe
+            >
               <el-table-column prop="name" label="规则名称" width="200" />
               <el-table-column prop="condition" label="触发条件">
                 <template slot-scope="scope">
-                  <code class="condition-code">{{ formatCondition(scope.row) }}</code>
+                  <code class="condition-code">{{
+                    formatCondition(scope.row)
+                  }}</code>
                 </template>
               </el-table-column>
               <el-table-column prop="level" label="告警级别" width="100">
                 <template slot-scope="scope">
-                  <el-tag :type="getLevelType(scope.row.level)" effect="dark" class="level-tag">
+                  <el-tag
+                    :type="getLevelType(scope.row.level)"
+                    effect="dark"
+                    class="level-tag"
+                  >
                     {{ getLevelText(scope.row.level) }}
                   </el-tag>
                 </template>
@@ -478,40 +578,109 @@
               </el-table-column>
               <el-table-column label="操作" width="180" fixed="right">
                 <template slot-scope="scope">
-                  <el-button size="mini" icon="el-icon-edit" @click="editAlarmRule(scope.row)" class="table-action">编辑</el-button>
-                  <el-button size="mini" icon="el-icon-delete" type="danger" @click="deleteAlarmRule(scope.row)" class="table-action">删除</el-button>
+                  <el-button
+                    size="mini"
+                    icon="el-icon-edit"
+                    @click="editAlarmRule(scope.row)"
+                    class="table-action"
+                    >编辑</el-button
+                  >
+                  <el-button
+                    size="mini"
+                    icon="el-icon-delete"
+                    type="danger"
+                    @click="deleteAlarmRule(scope.row)"
+                    class="table-action"
+                    >删除</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
           </div>
 
           <!-- 添加/编辑告警规则弹窗 -->
-          <el-dialog :title="isEditing ? '编辑告警规则' : '添加告警规则'" :visible.sync="dialogVisible" width="800px">
+          <el-dialog
+            :title="isEditing ? '编辑告警规则' : '添加告警规则'"
+            :visible.sync="dialogVisible"
+            width="800px"
+          >
             <el-form :model="currentRule" label-width="100px">
               <el-form-item label="告警名称">
-                <el-input v-model="currentRule.name" placeholder="请输入告警规则名称"></el-input>
+                <el-input
+                  v-model="currentRule.name"
+                  placeholder="请输入告警规则名称"
+                ></el-input>
               </el-form-item>
 
               <el-form-item label="告警条件">
-                <div v-for="(condition, index) in currentRule.conditions" :key="index" class="rule-condition">
+                <div
+                  v-for="(condition, index) in currentRule.conditions"
+                  :key="index"
+                  class="rule-condition"
+                >
                   <div class="condition-row">
-                    <el-select v-model="condition.type" placeholder="选择类型" style="width: 100px;">
+                    <el-select
+                      v-model="condition.type"
+                      placeholder="选择类型"
+                      style="width: 100px"
+                    >
                       <el-option label="上线" value="device_online"></el-option>
-                      <el-option label="离线" value="device_offline"></el-option>
-                      <el-option label="属性" value="device_property"></el-option>
+                      <el-option
+                        label="离线"
+                        value="device_offline"
+                      ></el-option>
+                      <el-option
+                        label="属性"
+                        value="device_property"
+                      ></el-option>
                     </el-select>
-                    <el-select v-model="condition.attribute" placeholder="选择属性" style="width: 180px;" v-if="condition.type=='device_property'">
-                      <el-option v-for="attr in attributeOptions" :key="attr.identifier" :label="attr.name" :value="attr.identifier"></el-option>
+                    <el-select
+                      v-model="condition.attribute"
+                      placeholder="选择属性"
+                      style="width: 180px"
+                      v-if="condition.type == 'device_property'"
+                    >
+                      <el-option
+                        v-for="attr in attributeOptions"
+                        :key="attr.identifier"
+                        :label="attr.name"
+                        :value="attr.identifier"
+                      ></el-option>
                     </el-select>
-                    <el-select v-model="condition.operator" placeholder="选择规则" style="width: 120px; margin-left: 10px;" v-if="condition.type=='device_property'">
-                      <el-option v-for="op in operatorOptions" :key="op.value" :label="op.label" :value="op.value"></el-option>
+                    <el-select
+                      v-model="condition.operator"
+                      placeholder="选择规则"
+                      style="width: 120px; margin-left: 10px"
+                      v-if="condition.type == 'device_property'"
+                    >
+                      <el-option
+                        v-for="op in operatorOptions"
+                        :key="op.value"
+                        :label="op.label"
+                        :value="op.value"
+                      ></el-option>
                     </el-select>
-                    <el-input v-model="condition.value" placeholder="输入值" style="width: 120px; margin-left: 10px;" v-if="condition.type=='device_property'"></el-input>
-                    <el-button v-if="currentRule.conditions.length > 1" type="danger" icon="el-icon-delete" circle style="margin-left: 10px;" @click="removeCondition(index)"></el-button>
+                    <el-input
+                      v-model="condition.value"
+                      placeholder="输入值"
+                      style="width: 120px; margin-left: 10px"
+                      v-if="condition.type == 'device_property'"
+                    ></el-input>
+                    <el-button
+                      v-if="currentRule.conditions.length > 1"
+                      type="danger"
+                      icon="el-icon-delete"
+                      circle
+                      style="margin-left: 10px"
+                      @click="removeCondition(index)"
+                    ></el-button>
                   </div>
 
                   <!-- 关系选择按钮（仅在不是最后一个条件时显示） -->
-                  <div v-if="index < currentRule.conditions.length - 1" class="relation-buttons">
+                  <div
+                    v-if="index < currentRule.conditions.length - 1"
+                    class="relation-buttons"
+                  >
                     <el-radio-group v-model="currentRule.relation" size="mini">
                       <el-radio-button label="and">并且</el-radio-button>
                       <el-radio-button label="or">或者</el-radio-button>
@@ -519,8 +688,13 @@
                   </div>
                 </div>
 
-                <div style="margin-top: 10px;">
-                  <el-button type="primary" icon="el-icon-plus" @click="addCondition">添加条件</el-button>
+                <div style="margin-top: 10px">
+                  <el-button
+                    type="primary"
+                    icon="el-icon-plus"
+                    @click="addCondition"
+                    >添加条件</el-button
+                  >
                 </div>
               </el-form-item>
 
@@ -534,28 +708,63 @@
               </el-form-item>
 
               <el-form-item label="重复告警">
-                <el-input type="number" v-model="currentRule.delayTime" style="width: 100px"/>秒内不重复告警
+                <el-input
+                  type="number"
+                  v-model="currentRule.delayTime"
+                  style="width: 100px"
+                />秒内不重复告警
               </el-form-item>
 
               <el-form-item label="告警消息">
-                <el-input type="textarea" v-model="currentRule.message" placeholder="请输入告警消息"></el-input>
+                <el-input
+                  type="textarea"
+                  v-model="currentRule.message"
+                  placeholder="请输入告警消息"
+                ></el-input>
               </el-form-item>
 
               <el-form-item label="执行动作">
-                <div v-for="(action, index) in currentRule.actions" :key="index" class="action-row">
-                  <el-select v-model="action.functionCode" placeholder="选择动作" style="width: 200px;">
-                    <el-option v-for="act in functionList" :key="act.functionCode" :label="act.functionName"
-                               :value="act.functionCode"></el-option>
+                <div
+                  v-for="(action, index) in currentRule.actions"
+                  :key="index"
+                  class="action-row"
+                >
+                  <el-select
+                    v-model="action.functionCode"
+                    placeholder="选择动作"
+                    style="width: 200px"
+                  >
+                    <el-option
+                      v-for="act in functionList"
+                      :key="act.functionCode"
+                      :label="act.functionName"
+                      :value="act.functionCode"
+                    ></el-option>
                   </el-select>
-                  <el-input v-model="action.functionParams" placeholder="输入参数" class="action-params"
-                            style="width: 300px;"></el-input>
-                  <el-button v-if="currentRule.actions.length > 1" type="danger" icon="el-icon-delete" circle
-                             style="margin-left: 10px;" @click="removeAction(index)"></el-button>
+                  <el-input
+                    v-model="action.functionParams"
+                    placeholder="输入参数"
+                    class="action-params"
+                    style="width: 300px"
+                  ></el-input>
+                  <el-button
+                    v-if="currentRule.actions.length > 1"
+                    type="danger"
+                    icon="el-icon-delete"
+                    circle
+                    style="margin-left: 10px"
+                    @click="removeAction(index)"
+                  ></el-button>
                 </div>
 
                 <!-- 添加执行动作按钮 -->
-                <div style="margin-top: 10px;">
-                  <el-button type="primary" icon="el-icon-plus" @click="addAction">添加执行动作</el-button>
+                <div style="margin-top: 10px">
+                  <el-button
+                    type="primary"
+                    icon="el-icon-plus"
+                    @click="addAction"
+                    >添加执行动作</el-button
+                  >
                 </div>
               </el-form-item>
             </el-form>
@@ -575,39 +784,48 @@
             <div class="filter-bar">
               <el-form :inline="true" class="filter-form">
                 <el-form-item label="告警名称">
-                  <el-input v-model="warnRecordParams.configName" style="width: 150px;"></el-input>
+                  <el-input
+                    v-model="warnRecordParams.configName"
+                    style="width: 150px"
+                  ></el-input>
                 </el-form-item>
                 <el-form-item label="告警类型">
-                  <el-select v-model="warnRecordParams.warnType" placeholder="全部" class="filter-select" style="width: 120px;">
+                  <el-select
+                    v-model="warnRecordParams.warnType"
+                    placeholder="全部"
+                    class="filter-select"
+                    style="width: 120px"
+                  >
                     <el-option label="全部" value="" />
-                    <el-option label="属性告警" value="0">
-                    </el-option>
-                    <el-option label="上线提醒" value="1">
-                    </el-option>
-                    <el-option label="离线告警" value="2">
-                    </el-option>
+                    <el-option label="属性告警" value="0"> </el-option>
+                    <el-option label="上线提醒" value="1"> </el-option>
+                    <el-option label="离线告警" value="2"> </el-option>
                   </el-select>
                 </el-form-item>
                 <el-form-item label="告警级别">
-                  <el-select v-model="warnRecordParams.warnLevel" placeholder="全部" class="filter-select" style="width: 120px;">
+                  <el-select
+                    v-model="warnRecordParams.warnLevel"
+                    placeholder="全部"
+                    class="filter-select"
+                    style="width: 120px"
+                  >
                     <el-option label="全部" value="" />
-                    <el-option label="紧急" value="1">
-                    </el-option>
-                    <el-option label="严重" value="2">
-                    </el-option>
-                    <el-option label="警告" value="3">
-                    </el-option>
-                    <el-option label="正常" value="4">
-                    </el-option>
+                    <el-option label="紧急" value="1"> </el-option>
+                    <el-option label="严重" value="2"> </el-option>
+                    <el-option label="警告" value="3"> </el-option>
+                    <el-option label="正常" value="4"> </el-option>
                   </el-select>
                 </el-form-item>
                 <el-form-item label="处理状态">
-                  <el-select v-model="warnRecordParams.status" placeholder="全部" class="filter-select" style="width: 100px;">
+                  <el-select
+                    v-model="warnRecordParams.status"
+                    placeholder="全部"
+                    class="filter-select"
+                    style="width: 100px"
+                  >
                     <el-option label="全部" value="" />
-                    <el-option label="未处理" value="0">
-                    </el-option>
-                    <el-option label="已处理" value="1">
-                    </el-option>
+                    <el-option label="未处理" value="0"> </el-option>
+                    <el-option label="已处理" value="1"> </el-option>
                   </el-select>
                 </el-form-item>
                 <el-form-item label="时间范围">
@@ -621,39 +839,64 @@
                   />
                 </el-form-item>
                 <el-form-item>
-                  <el-button type="primary" icon="el-icon-search" @click="searchAlarms" class="search-btn">查询</el-button>
+                  <el-button
+                    type="primary"
+                    icon="el-icon-search"
+                    @click="searchAlarms"
+                    class="search-btn"
+                    >查询</el-button
+                  >
                 </el-form-item>
               </el-form>
             </div>
-            <el-table :data="alarmRecords" style="width: 100%" class="data-table" stripe>
+            <el-table
+              :data="alarmRecords"
+              style="width: 100%"
+              class="data-table"
+              stripe
+            >
               <el-table-column prop="configName" label="告警名称" width="150" />
               <el-table-column prop="createTime" label="发生时间" width="180" />
               <el-table-column prop="warnLevel" label="级别" width="150">
                 <template slot-scope="scope">
-
-                  <el-tag :type="getLevelType(scope.row.warnLevel)" class="level-tag">
+                  <el-tag
+                    :type="getLevelType(scope.row.warnLevel)"
+                    class="level-tag"
+                  >
                     {{ getLevelText(scope.row.warnLevel) }}
                   </el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="warnType" label="类型" width="150">
                 <template slot-scope="scope">
-                  <el-tag :type="getWarnTypeColor(scope.row.warnType)" class="level-tag">
+                  <el-tag
+                    :type="getWarnTypeColor(scope.row.warnType)"
+                    class="level-tag"
+                  >
                     {{ getTypeText(scope.row.warnType) }}
                   </el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="status" label="状态" width="150">
                 <template slot-scope="scope">
-                  <el-tag :type="scope.row.status === '1' ? 'success' : 'info'" effect="dark">
-                    {{ scope.row.status === '1' ? '已处理' : '未处理' }}
+                  <el-tag
+                    :type="scope.row.status === '1' ? 'success' : 'info'"
+                    effect="dark"
+                  >
+                    {{ scope.row.status === "1" ? "已处理" : "未处理" }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="warnMessage" label="告警消息"/>
+              <el-table-column prop="warnMessage" label="告警消息" />
               <el-table-column label="操作" width="200" fixed="right">
                 <template slot-scope="scope">
-                  <el-button size="mini" icon="el-icon-view" @click="viewAlarmDetail(scope.row)" class="table-action">详情</el-button>
+                  <el-button
+                    size="mini"
+                    icon="el-icon-view"
+                    @click="viewAlarmDetail(scope.row)"
+                    class="table-action"
+                    >详情</el-button
+                  >
                   <el-button
                     v-if="scope.row.status !== 'resolved'"
                     size="mini"
@@ -695,7 +938,8 @@
                     <span class="title-text">数据定期删除</span>
                     <el-tooltip
                       content="开启后系统将自动清理超过保留时间的数据，释放存储空间"
-                      placement="top">
+                      placement="top"
+                    >
                       <i class="el-icon-info config-tip"></i>
                     </el-tooltip>
                   </div>
@@ -707,7 +951,8 @@
                     v-model="regularCleaningBoolean"
                     active-text="开启"
                     inactive-text="关闭"
-                    active-color="#13ce66">
+                    active-color="#13ce66"
+                  >
                   </el-switch>
 
                   <div v-if="regularCleaningBoolean" class="retention-config">
@@ -717,12 +962,14 @@
                       :min="1"
                       size="small"
                       controls-position="right"
-                      class="retention-input">
+                      class="retention-input"
+                    >
                     </el-input-number>
                     <el-select
                       v-model="retentionUnit"
                       size="small"
-                      class="unit-select gray-select">
+                      class="unit-select gray-select"
+                    >
                       <el-option label="时" value="hour"></el-option>
                       <el-option label="天" value="day"></el-option>
                       <el-option label="周" value="week"></el-option>
@@ -738,7 +985,8 @@
                     size="small"
                     type="primary"
                     icon="el-icon-check"
-                    @click="saveRegularCleaningConfig">
+                    @click="saveRegularCleaningConfig"
+                  >
                     保存
                   </el-button>
                 </div>
@@ -750,14 +998,20 @@
                     <span class="title-text">自定义配置</span>
                     <el-tooltip
                       content="开启后系统将自动清理超过保留时间的数据，释放存储空间"
-                      placement="top">
+                      placement="top"
+                    >
                       <i class="el-icon-info config-tip"></i>
                     </el-tooltip>
                   </div>
-                  <div class="config-desc">自定义配置，作为协议参数传递给解析方法</div>
+                  <div class="config-desc">
+                    自定义配置，作为协议参数传递给解析方法
+                  </div>
                 </div>
                 <div class="config-input">
-                  <el-input placeholder="如IP、端口、设备特殊配置等" v-model="customConfig"></el-input>
+                  <el-input
+                    placeholder="如IP、端口、设备特殊配置等"
+                    v-model="customConfig"
+                  ></el-input>
                 </div>
                 <!-- 单行保存按钮 -->
                 <div class="item-actions">
@@ -765,7 +1019,8 @@
                     size="small"
                     type="primary"
                     icon="el-icon-check"
-                    @click="saveCustomConfig">
+                    @click="saveCustomConfig"
+                  >
                     保存
                   </el-button>
                 </div>
@@ -810,7 +1065,7 @@
                   end-placeholder="结束时间"
                   value-format="yyyy-MM-dd HH:mm:ss"
                   class="filter-date"
-                  style="width: 360px;"
+                  style="width: 360px"
                 />
               </el-form-item>
 
@@ -846,7 +1101,10 @@
             <el-table-column prop="createTime" label="上报时间" width="150" />
             <el-table-column prop="logType" label="消息类型" width="120">
               <template slot-scope="scope">
-                <el-tag :type="getLogTypeTagType(scope.row.logType)" effect="light">
+                <el-tag
+                  :type="getLogTypeTagType(scope.row.logType)"
+                  effect="light"
+                >
                   {{ getLogTypeText(scope.row.logType) }}
                 </el-tag>
               </template>
@@ -858,7 +1116,13 @@
             />
             <el-table-column label="操作" width="200" fixed="right">
               <template slot-scope="scope">
-                <el-button size="mini" icon="el-icon-view" @click="viewHistoryDetail(scope.row)" class="table-action">详情</el-button>
+                <el-button
+                  size="mini"
+                  icon="el-icon-view"
+                  @click="viewHistoryDetail(scope.row)"
+                  class="table-action"
+                  >详情</el-button
+                >
               </template>
             </el-table-column>
           </el-table>
@@ -875,40 +1139,9 @@
             @current-change="handleHistoryPageChange"
           />
         </div>
-
       </el-dialog>
     </el-card>
-    <el-drawer
-      :title="'新增配置'"
-      :visible.sync="openAddModbus"
-      direction="rtl"
-      size="40%"
-      :before-close="closeModbus"
-      class="component-drawer"
-    >
-      <div class="drawer-content">
-        <!-- 添加或修改设备对话框 -->
-        <el-form ref="modbusForm" :model="modbusForm" label-width="100px">
-          <el-form-item label="标识" prop="code" required>
-            <el-input v-model="modbusForm.code" placeholder="请输入标识" />
-          </el-form-item>
-          <el-form-item label="寄存器范围" prop="registerRange" required>
-            <el-input v-model="modbusForm.registerRange" placeholder="逗号分隔如：0,1-5,6,7-10"/>
-          </el-form-item>
-          <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
-            <el-input type="number" v-model="modbusForm.intervalTime" placeholder="多久执行一次读取指令，如：10" />
-          </el-form-item>
-          <el-form-item label="读取后延迟(毫秒)" prop="intervalTime" required>
-            <el-input type="number" v-model="modbusForm.delayTime" placeholder="同一个串口服务器每次读取间隔，如：1000"/>
-          </el-form-item>
-        </el-form>
-        <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 20px;">
-          <el-button type="primary" @click="submitModbusForm">确 定</el-button>
-          <!-- 可选：加间距，按钮更美观 -->
-          <el-button @click="closeModbus" style="margin-left: 12px;">取 消</el-button>
-        </div>
-      </div>
-    </el-drawer>
+
     <!-- 上报消息弹窗 -->
     <el-dialog
       title="上报消息"
@@ -933,40 +1166,79 @@
 
       <div slot="footer" class="dialog-footer">
         <el-button @click="jsonViewerVisible = false">关闭</el-button>
-        <el-button type="primary" @click="jsonViewerVisible = false">确定</el-button>
+        <el-button type="primary" @click="jsonViewerVisible = false"
+          >确定</el-button
+        >
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import {getDeviceLastData, getPropertyBySn, listProperties, saveBatch} from "@/api/business/properties"
-import {editCustomConfig, editRetentionTime, getDevice, updateDevice,updateDeviceSlaveId} from "@/api/business/device";
-import {formatDateTime} from "@/utils/date";
-import {listFunctionRecord,delFunctionRecord,getFunctionRecord,updateFunctionRecord,addFunctionRecord} from "@/api/business/functionRecord";
+import {
+  getDeviceLastData,
+  getPropertyBySn,
+  listProperties,
+  saveBatch,
+} from "@/api/business/properties";
+import {
+  editCustomConfig,
+  editRetentionTime,
+  getDevice,
+  updateDevice,
+  updateDeviceSlaveId,
+} from "@/api/business/device";
+import { formatDateTime } from "@/utils/date";
+import {
+  listFunctionRecord,
+  delFunctionRecord,
+  getFunctionRecord,
+  updateFunctionRecord,
+  addFunctionRecord,
+} from "@/api/business/functionRecord";
 import {
   addWarnConfig,
   delWarnConfig,
   listWarnConfig,
   toggleRuleStatus,
-  updateWarnConfig
+  updateWarnConfig,
 } from "@/api/business/warnConfig";
-import {readSwitchByDevice} from "@/api/business/modbus";
-import {listWarnRecord,dealWarmRecord} from "@/api/business/warnRecord";
-import {listDeviceLogs} from "@/api/business/deviceLogs";
-import {createWebSocket} from '@/utils/websocket'
-import {listFunction,getFunction,delFunction,addFunction,updateFunction,downFunction,syncProductToDevice} from "@/api/business/function";
-import {syncRetentionTimeToDevice, updateProduct} from "@/api/business/product";
-import {listModbus,delModbus,updateModbus,addModbus,getModbus} from "@/api/business/modbus";
-import {getComponent} from "@/api/business/component";
+import { listWarnRecord, dealWarmRecord } from "@/api/business/warnRecord";
+import { listDeviceLogs } from "@/api/business/deviceLogs";
+import { createWebSocket } from "@/utils/websocket";
+import {
+  listFunction,
+  getFunction,
+  delFunction,
+  addFunction,
+  updateFunction,
+  downFunction,
+  syncProductToDevice,
+} from "@/api/business/function";
+import {
+  syncRetentionTimeToDevice,
+  updateProduct,
+} from "@/api/business/product";
+import { getComponent } from "@/api/business/component";
+import ModbusConfig from "@/components/ModbusConfig";
+import S71200TcpConfig from "@/components/S71200TcpConfig";
+import OmronFinsTcpConfig from "@/components/OmronFinsTcpConfig";
+import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
+
 export default {
-  name: 'DeviceDetail',
+  name: "DeviceDetail",
+  components: {
+    ModbusConfig,
+    S71200TcpConfig,
+    OmronFinsTcpConfig,
+    DatabaseTcpConfig,
+  },
   created() {
-    this.deviceId = this.$route.query.id
-    this.getDeviceById(this.deviceId,this.$route.query.toPage);
-    if(this.$route.query.toPage){
-      this.activeTab = this.$route.query.toPage
-      this.handleTabClick({name:this.$route.query.toPage})
+    this.deviceId = this.$route.query.id;
+    this.getDeviceById(this.deviceId, this.$route.query.toPage);
+    if (this.$route.query.toPage) {
+      this.activeTab = this.$route.query.toPage;
+      this.handleTabClick({ name: this.$route.query.toPage });
     }
   },
   computed: {
@@ -976,8 +1248,10 @@ export default {
       try {
         const trimmed = this.selectedCommand.functionParams.trim();
         // 检查是否是有效的 JSON
-        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-          (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        if (
+          (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+          (trimmed.startsWith("[") && trimmed.endsWith("]"))
+        ) {
           JSON.parse(trimmed);
           return true;
         }
@@ -993,84 +1267,80 @@ export default {
       },
       set(value) {
         this.regularCleaning = value ? "1" : "0";
-      }
-    }
+      },
+    },
   },
   data() {
     return {
       websocket: null,
-      deviceId:'',
+      deviceId: "",
       isConnected: false,
-      activeTab: 'realData',
+      activeTab: "realData",
       connectionStatus: "",
       device: {
-        id: '',
-        deviceName: '',
-        status: '0',
+        id: "",
+        deviceName: "",
+        status: "0",
         deviceCount: 156,
-        createTime: '',
-        deviceSn:''
+        createTime: "",
+        deviceSn: "",
       },
       modbusEnabled: true,
       // 数据定期删除配置
       regularCleaning: "1",
       retentionTime: 24,
-      retentionUnit: 'day',
+      retentionUnit: "day",
       thingModelData: [],
       deviceAccessForm: {
-        protocol: 'MQTT',
-        authType: 'deviceSecret',
+        protocol: "MQTT",
+        authType: "deviceSecret",
         autoRegister: true,
-        mqttHost: 'mqtt://iot.example.com',
-        port: '1883'
+        mqttHost: "mqtt://iot.example.com",
+        port: "1883",
       },
-      alarmRules: [
-      ],
+      alarmRules: [],
       dialogVisible: false,
       isEditing: false,
       currentRule: {
         id: null,
-        name: '',
-        conditions: [{attribute: '', operator: '', value: '',type:''}],
-        relation: 'and',
-        level: '1',
-        message: '',
-        actions: [{functionCode: '', functionParams: '', functionName: ''}],
+        name: "",
+        conditions: [{ attribute: "", operator: "", value: "", type: "" }],
+        relation: "and",
+        level: "1",
+        message: "",
+        actions: [{ functionCode: "", functionParams: "", functionName: "" }],
         enable: true,
-        deviceSn: ''
+        deviceSn: "",
       },
-      attributeOptions: [
-      ],
+      attributeOptions: [],
       operatorOptions: [
-        { label: '大于', value: 'gt' },
-        { label: '大于等于', value: 'ge' },
-        { label: '等于', value: 'eq' },
-        { label: '不等于', value: 'ne' },
-        { label: '小于', value: 'lt' },
-        { label: '小于等于', value: 'le' },
-        { label: '包含', value: 'contains' },
-        { label: '不包含', value: 'notContains' },
-        { label: '被包含', value: 'like' },
-        { label: '不被包含', value: 'notLike' },
-        { label: '在列表中', value: 'in' },
-        { label: '不在列表中', value: 'notIn' }
+        { label: "大于", value: "gt" },
+        { label: "大于等于", value: "ge" },
+        { label: "等于", value: "eq" },
+        { label: "不等于", value: "ne" },
+        { label: "小于", value: "lt" },
+        { label: "小于等于", value: "le" },
+        { label: "包含", value: "contains" },
+        { label: "不包含", value: "notContains" },
+        { label: "被包含", value: "like" },
+        { label: "不被包含", value: "notLike" },
+        { label: "在列表中", value: "in" },
+        { label: "不在列表中", value: "notIn" },
       ],
-      actionOptions: [
-      ],
-      realTimeProperties: [
-      ],
-      alarmRecords:[],
+      actionOptions: [],
+      realTimeProperties: [],
+      alarmRecords: [],
       pagination: {
         current: 1,
         size: 10,
-        total: 0
+        total: 0,
       },
       functionRecordParams: {
         pageNum: 1,
         pageSize: 10,
         total: 0,
         deviceSn: null,
-        functionCode: null
+        functionCode: null,
       },
       // 属性查询参数
       propertyParams: {
@@ -1083,281 +1353,215 @@ export default {
         parentId: null,
         dataType: null,
         sortNum: null,
-        fromType: null
+        fromType: null,
       },
       // 属性查询参数
       warnRecordParams: {
-        warnLevel:null,
-        status:null,
-        configName:null,
-        belongSn:null,
-        rangeDate:null,
-        warnType:null
+        warnLevel: null,
+        status: null,
+        configName: null,
+        belongSn: null,
+        rangeDate: null,
+        warnType: null,
       },
-      jsonStr:null,
+      jsonStr: null,
       jsonViewerVisible: false,
       historyDialogVisible: false,
       historyData: [],
       historyLoading: false,
-      historyParams: {
-      },
+      historyParams: {},
       historyPagination: {
         current: 1,
         size: 10,
-        total: 0
+        total: 0,
       },
       // 消息类型映射配置
       logTypeMap: {
-        'PROPERTY': '属性上报',
-        'ONLINE': '设备上线',
-        'OFFLINE': '设备离线'
+        PROPERTY: "属性上报",
+        ONLINE: "设备上线",
+        OFFLINE: "设备离线",
       },
       // 标签类型映射
       logTypeTagMap: {
-        'PROPERTY': 'info',
-        'ONLINE': 'success',
-        'OFFLINE': 'danger'
+        PROPERTY: "info",
+        ONLINE: "success",
+        OFFLINE: "danger",
       },
       autoBackupEnabled: true,
-      functionList:[],
+      functionList: [],
       functionDialogVisible: false,
       functionIsEditing: false,
-      currentFunction:{
-        id:null,
-        functionName:null,
-        functionCode:null,
-        functionParams:null,
-        belongSn:null,
-        belongType:0
+      currentFunction: {
+        id: null,
+        functionName: null,
+        functionCode: null,
+        functionParams: null,
+        belongSn: null,
+        belongType: 0,
       },
-      selectedCommand:{
+      selectedCommand: {
         functionParams: null,
         functionCode: null,
-        belongSn: null
-      },
-      customConfig:null,
-      functionRecordList:[],
-      openAddModbus: false,
-      modbusParams: {
-        pageNum: 1,
-        pageSize: 10,
-        total: 0,
         belongSn: null,
-        belongType: null
       },
-      modbusIsEdit:false,
-      modbusForm:{
+      customConfig: null,
+      functionRecordList: [],
 
-      },
-      modbusList:[],
-      component:{},
+      component: {},
       isEditingSlaveId: false, // 控制从站ID编辑状态
-      tempSlaveId: '', // 暂存编辑的从站ID（避免直接修改原数据）
-    }
+      tempSlaveId: "", // 暂存编辑的从站ID（避免直接修改原数据）
+    };
   },
   methods: {
-    getDeviceById(deviceId){
-      getDevice(deviceId).then(res=>{
-        this.device = res.data
+    getDeviceById(deviceId) {
+      getDevice(deviceId).then((res) => {
+        this.device = res.data;
         this.tempSlaveId = this.device.slaveId;
-        this.modbusEnabled = this.device.modbusRead==1?true:false
+        this.modbusEnabled = this.device.modbusRead == 1 ? true : false;
         this.getPropertyList();
         this.connectSocket();
         this.getPropertyByDeviceSn();
         this.getComponentById();
-      })
+      });
     },
-    getComponentById(){
-      getComponent(this.device.componentId).then(res=>{
-        this.component = res?.data
-      })
+    getComponentById() {
+      getComponent(this.device.componentId).then((res) => {
+        this.component = res?.data;
+      });
     },
-    getPropertyList(){
+    getPropertyList() {
       this.propertyParams.belongSn = this.device.deviceSn;
-      listProperties(this.propertyParams).then(res=>{
-        this.thingModelData = res.rows
-        this.realTimeProperties = res.rows
+      listProperties(this.propertyParams).then((res) => {
+        this.thingModelData = res.rows;
+        this.realTimeProperties = res.rows;
         this.getDeviceLastData();
-      })
+      });
     },
-    getModbusConfigByDeviceSn() {
-      this.modbusParams.belongSn = this.device.deviceSn
-      listModbus(this.modbusParams).then(res => {
-        if(res?.code==200){
-          this.modbusList = res?.rows;
-          this.modbusParams.total = res?.total
-        }
-      })
-    },
-    // Modbus功能开关切换事件
-    handleModbusStatusChange(enabled) {
-      readSwitchByDevice({deviceSn:this.device.deviceSn,isOpen:enabled==true?'1':'0'}).then(res=>{
-        if(res?.code == 200){
-          this.$message.success("操作成功");
-        }
-      })
-    },
-    /** 提交按钮 */
-    submitModbusForm() {
-      this.$refs["modbusForm"].validate(valid => {
-        if (valid) {
-          if (this.modbusForm.id != null) {
-            updateModbus(this.modbusForm).then(response => {
-              this.$modal.msgSuccess("修改成功")
-              this.openAddModbus = false
-              this.getModbusConfigByDeviceSn()
-            })
-          } else {
-            addModbus(this.modbusForm).then(response => {
-              this.$modal.msgSuccess("新增成功")
-              this.openAddModbus = false
-              this.getModbusConfigByDeviceSn()
-            })
-          }
-        }
-      })
-    },
-    // 取消按钮
-    closeModbus() {
-      this.openAddModbus = false
-      this.resetAddModbusConfig()
-    },
-    resetAddModbusConfig(){
-      this.modbusForm = {
-        id: null,
-        belongSn: null,
-        belongType: null,
-        code: null,
-        createTime: null,
-        registerRange: null,
-        intervalTime: null,
-        delayTime: null
-      }
-      this.resetForm("modbusForm")
-    },
+
     getLevelType(level) {
       const typeMap = {
-        '1': 'danger',     // 紧急 - 红色
-        '2': 'warning',    // 严重 - 橙色
-        '3': 'normal',       // 警告 - 蓝色
-        '4': 'success'     // 正常 - 绿色
+        1: "danger", // 紧急 - 红色
+        2: "warning", // 严重 - 橙色
+        3: "normal", // 警告 - 蓝色
+        4: "success", // 正常 - 绿色
       };
-      return typeMap[level] || 'info';
+      return typeMap[level] || "info";
     },
     getWarnTypeColor(level) {
       const typeMap = {
-        '0': 'normal',
-        '1': 'success',
-        '2': 'danger'
+        0: "normal",
+        1: "success",
+        2: "danger",
       };
-      return typeMap[level] || 'info';
+      return typeMap[level] || "info";
     },
     getLevelText(level) {
       const textMap = {
-        '1': '紧急',
-        '2': '严重',
-        '3': '警告',
-        '4': '正常'
+        1: "紧急",
+        2: "严重",
+        3: "警告",
+        4: "正常",
       };
-      return textMap[level] || '未知';
+      return textMap[level] || "未知";
     },
     getTypeText(level) {
       const textMap = {
-        '0': '属性告警',
-        '1': '上线提醒',
-        '2': '离线告警'
+        0: "属性告警",
+        1: "上线提醒",
+        2: "离线告警",
       };
-      return textMap[level] || '未知';
+      return textMap[level] || "未知";
     },
     getTriggerText(level) {
       const textMap = {
-        '0': '手动触发',
-        '1': '告警触发',
-        '2': '定时触发',
+        0: "手动触发",
+        1: "告警触发",
+        2: "定时触发",
       };
-      return textMap[level] || '未知';
+      return textMap[level] || "未知";
     },
     formatDate(dateString) {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      const seconds = String(date.getSeconds()).padStart(2, '0')
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
 
-      return `${year}-${month}-${day}`
+      return `${year}-${month}-${day}`;
     },
     formatDateTime(dateString) {
-      if (!dateString) return ''
-      const date = new Date(dateString)
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      const seconds = String(date.getSeconds()).padStart(2, '0')
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
 
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     handleTabClick(tab) {
       //告警配置页面
-      if(tab.name==='alarmConfig'){
+      if (tab.name === "alarmConfig") {
         //初始化数据
         this.getWarnConfigList();
         this.getPropertyByDeviceSn();
       }
       //告警记录页面
-      if(tab.name==='alarmRecord'){
+      if (tab.name === "alarmRecord") {
         //初始化数据
         this.getWarnRecordList();
       }
       //指令下发配置
-      if (tab.name === 'functionConfig') {
+      if (tab.name === "functionConfig") {
         //初始化数据
         this.getFunctionList();
       }
       //指令下发测试
-      if (tab.name === 'functionTest') {
+      if (tab.name === "functionTest") {
         //初始化数据
         this.getFunctionList();
       }
       //指令下发记录
-      if (tab.name === 'functionRecord') {
+      if (tab.name === "functionRecord") {
         //初始化数据
         this.getFunctionRecordList();
       }
       //其他配置页面
-      if (tab.name === 'otherConfig') {
+      if (tab.name === "otherConfig") {
         //初始化数据
-        this.retentionUnit = this.device.retentionUnit ? this.device.retentionUnit : "day";
+        this.retentionUnit = this.device.retentionUnit
+          ? this.device.retentionUnit
+          : "day";
         this.retentionTime = this.device.retentionTime;
         this.regularCleaning = this.device.regularCleaning;
-        this.customConfig = this.device.customConfig
-      }
-      //Modbus配置
-      if (tab.name === 'modbusConfig') {
-        //初始化数据
-        this.getModbusConfigByDeviceSn();
+        this.customConfig = this.device.customConfig;
       }
     },
     //指令下发列表查询
-    getFunctionList(){
-      listFunction({pageNum:1,pageSize: 10000,belongSn:this.device.deviceSn}).then(res=>{
+    getFunctionList() {
+      listFunction({
+        pageNum: 1,
+        pageSize: 10000,
+        belongSn: this.device.deviceSn,
+      }).then((res) => {
         this.functionList = res?.rows;
-        if(this.functionList.length===1){
-          this.selectedCommand = this.functionList[0]
+        if (this.functionList.length === 1) {
+          this.selectedCommand = this.functionList[0];
         }
-      })
+      });
     },
     //指令下发记录列表查询
-    getFunctionRecordList(){
-      this.functionRecordParams.deviceSn = this.device.deviceSn
-      listFunctionRecord(this.functionRecordParams).then(res=>{
+    getFunctionRecordList() {
+      this.functionRecordParams.deviceSn = this.device.deviceSn;
+      listFunctionRecord(this.functionRecordParams).then((res) => {
         this.functionRecordList = res?.rows;
-        this.functionRecordParams.total = res?.total
-      })
+        this.functionRecordParams.total = res?.total;
+      });
     },
     addFunction() {
       this.functionIsEditing = false;
@@ -1370,130 +1574,115 @@ export default {
       this.functionDialogVisible = true;
     },
     saveFunction() {
-      this.currentFunction.belongSn = this.device.deviceSn
-      this.currentFunction.belongType = 1
+      this.currentFunction.belongSn = this.device.deviceSn;
+      this.currentFunction.belongType = 1;
       if (this.functionIsEditing) {
         // 更新现有指令
-        updateFunction(this.currentFunction).then(res => {
+        updateFunction(this.currentFunction).then((res) => {
           if (res?.code === 200) {
             this.getFunctionList();
           }
         });
       } else {
         // 添加新指令
-        addFunction(this.currentFunction).then(res => {
+        addFunction(this.currentFunction).then((res) => {
           if (res?.code === 200) {
             this.getFunctionList();
           }
         });
       }
       this.functionDialogVisible = false;
-      this.$message.success(this.functionIsEditing ? '更新成功' : '添加成功');
+      this.$message.success(this.functionIsEditing ? "更新成功" : "添加成功");
     },
-    addModbusConfig(){
-      this.modbusIsEdit = false
-      this.openAddModbus = true;
-      this.resetAddModbusConfig()
-      this.modbusForm.belongSn = this.device.deviceSn
-      this.modbusForm.belongType = '0'
-      this.modbusForm.intervalTime = 10
-      this.modbusForm.delayTime = 100
-    },
-    editModbusConfig(item){
-      this.modbusIsEdit = true
-      this.openAddModbus = true;
-      getModbus(item.id).then(response => {
-        this.modbusForm = response.data
-      })
-    },
-    deleteModbus(id) {
-      this.$confirm('确定要删除此配置吗?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        delModbus(id).then(res => {
-          if (res?.code === 200) {
-            this.getModbusConfigByDeviceSn();
-            this.$message.success('删除成功');
-          }
-        })
-      });
-    },
+
     saveRegularCleaningConfig() {
       editRetentionTime({
         deviceSn: this.device.deviceSn,
         retentionTime: this.retentionTime,
         regularCleaning: this.regularCleaning,
-        retentionUnit: this.retentionUnit
-      }).then(res => {
+        retentionUnit: this.retentionUnit,
+      }).then((res) => {
         if (res?.code == 200) {
           this.getDeviceById(this.deviceId);
-          this.$message.success('保存成功')
+          this.$message.success("保存成功");
         }
-      })
+      });
     },
     saveCustomConfig() {
       editCustomConfig({
         deviceSn: this.device.deviceSn,
         customConfig: this.customConfig,
-      }).then(res => {
+      }).then((res) => {
         if (res?.code == 200) {
           this.getDeviceById(this.deviceId);
-          this.$message.success('保存成功')
+          this.$message.success("保存成功");
         }
-      })
-    },
-    deleteFunction(data) {
-      this.$confirm('确定要删除这条指令配置吗?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        delFunction(data.id).then(res => {
-          if (res?.code === 200) {
-            this.getFunctionList();
-            this.$message.success('删除成功');
-          }
-        })
       });
     },
-    handleCommandSubmit(){
-      let funtionData = this.functionList.find(o=>o.id == this.selectedCommand.id)
-      downFunction({functionCode:funtionData.functionCode,functionParams:this.selectedCommand.functionParams,belongSn:this.device.deviceSn}).then(res=>{
-        if(res?.code==200){
-          this.$message.success("下发成功")
-        }else {
-          this.$message.warning("下发失败")
+    deleteFunction(data) {
+      this.$confirm("确定要删除这条指令配置吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }).then(() => {
+        delFunction(data.id).then((res) => {
+          if (res?.code === 200) {
+            this.getFunctionList();
+            this.$message.success("删除成功");
+          }
+        });
+      });
+    },
+    handleCommandSubmit() {
+      let funtionData = this.functionList.find(
+        (o) => o.id == this.selectedCommand.id
+      );
+      downFunction({
+        functionCode: funtionData.functionCode,
+        functionParams: this.selectedCommand.functionParams,
+        belongSn: this.device.deviceSn,
+      }).then((res) => {
+        if (res?.code == 200) {
+          this.$message.success("下发成功");
+        } else {
+          this.$message.warning("下发失败");
         }
-      })
+      });
     },
     //直接查询所有规则
-    getWarnConfigList(){
+    getWarnConfigList() {
       //初始化数据
-      listWarnConfig({belongSn:this.device.deviceSn,pageNum:1,pageSize:10000}).then(res=>{
+      listWarnConfig({
+        belongSn: this.device.deviceSn,
+        pageNum: 1,
+        pageSize: 10000,
+      }).then((res) => {
         this.alarmRules = [];
         for (let i = 0; i < res?.rows.length; i++) {
           this.alarmRules.push(JSON.parse(res?.rows[i].ruleJson));
         }
-      })
+      });
     },
     //查询告警记录
-    getWarnRecordList(){
-      this.warnRecordParams.belongSn = this.device.deviceSn
-      listWarnRecord({pageNum:this.pagination.current,pageSize:this.pagination.size,...this.warnRecordParams}).then(res=>{
-        if(res?.code===200){
+    getWarnRecordList() {
+      this.warnRecordParams.belongSn = this.device.deviceSn;
+      listWarnRecord({
+        pageNum: this.pagination.current,
+        pageSize: this.pagination.size,
+        ...this.warnRecordParams,
+      }).then((res) => {
+        if (res?.code === 200) {
           this.alarmRecords = res?.rows;
           this.pagination.total = res?.total;
-        }else {
+        } else {
           this.$message.error(res?.msg);
         }
-      })
+      });
     },
     // 编辑物模型
     editThingModel(row) {
       // 先取消其他行的编辑状态
-      this.thingModelData.forEach(item => {
+      this.thingModelData.forEach((item) => {
         if (item.editing && item !== row) {
           item.editing = false;
         }
@@ -1501,23 +1690,28 @@ export default {
       // 设置当前行为编辑状态
       row.editing = true;
       // 保存原始数据用于取消编辑时恢复
-      this.$set(row, 'originalData', { ...row });
+      this.$set(row, "originalData", { ...row });
     },
 
     // 保存物模型
     saveThingModel() {
       //校验数据完整性
       for (let i = 0; i < this.thingModelData.length; i++) {
-        let current = this.thingModelData[i]
-        if(!current.identifier||!current.name||!current.dataType){
+        let current = this.thingModelData[i];
+        if (!current.identifier || !current.name || !current.dataType) {
           this.$message.error("请将信息填写完整再提交");
-          return
+          return;
         }
       }
-      const data = {belongSn:this.device.deviceSn,belongType:"0",propertyList:this.thingModelData,fromType:"0"}
-      saveBatch(data).then(response => {
-        this.$modal.msgSuccess("新增成功")
-        this.getPropertyList()
+      const data = {
+        belongSn: this.device.deviceSn,
+        belongType: "0",
+        propertyList: this.thingModelData,
+        fromType: "0",
+      };
+      saveBatch(data).then((response) => {
+        this.$modal.msgSuccess("新增成功");
+        this.getPropertyList();
       });
     },
 
@@ -1528,30 +1722,30 @@ export default {
         delete row.originalData;
       }
       row.editing = false;
-      this.$message.info('已取消编辑');
+      this.$message.info("已取消编辑");
     },
     // 更新实时属性数据
     updateRealTimeProperties(realTimeData) {
       // 创建新的实时属性数组，确保thingModelData中的所有属性都显示
-      this.realTimeProperties = this.thingModelData.map(property => {
-        const identifier = property.identifier
-        let currentValue = property.value // 默认使用模型中的值
-        let currentUpdateTime = property.updateTime
+      this.realTimeProperties = this.thingModelData.map((property) => {
+        const identifier = property.identifier;
+        let currentValue = property.value; // 默认使用模型中的值
+        let currentUpdateTime = property.updateTime;
 
         // 检查实时数据中是否有该属性
         if (realTimeData?.properties?.hasOwnProperty(identifier)) {
           // 有实时数据：使用实时数据
-          currentValue = realTimeData.properties[identifier]
-          currentUpdateTime = formatDateTime(realTimeData.reportTime)
+          currentValue = realTimeData.properties[identifier];
+          currentUpdateTime = formatDateTime(realTimeData.reportTime);
         } else {
           // 没有实时数据：检查是否在已有的realTimeProperties中存在
           const existingProperty = this.realTimeProperties.find(
-            item => item.identifier === identifier
-          )
+            (item) => item.identifier === identifier
+          );
           if (existingProperty) {
             // 使用之前的数据
-            currentValue = existingProperty.value
-            currentUpdateTime = existingProperty.updateTime
+            currentValue = existingProperty.value;
+            currentUpdateTime = existingProperty.updateTime;
           }
           // 如果既没有实时数据也没有历史数据，就使用模型中的默认值
         }
@@ -1559,16 +1753,16 @@ export default {
         return {
           ...property,
           value: currentValue,
-          updateTime: currentUpdateTime
-        }
-      })
+          updateTime: currentUpdateTime,
+        };
+      });
     },
     // 切换从站ID编辑状态
     toggleSlaveIdEdit(edit) {
       if (edit) {
         this.isEditingSlaveId = true;
         // 赋值到临时变量（避免直接修改原数据）
-        this.tempSlaveId = this.device.slaveId || '';
+        this.tempSlaveId = this.device.slaveId || "";
         // 延迟让输入框获取焦点（DOM渲染完成后）
         this.$nextTick(() => {
           this.$refs.slaveIdInput?.focus();
@@ -1580,8 +1774,13 @@ export default {
     // 保存从站ID（失焦/回车触发）
     async saveSlaveId() {
       // 1. 简单验证（从站ID通常是1-247的数字）
-      if (!this.tempSlaveId || isNaN(this.tempSlaveId) || this.tempSlaveId < 1 || this.tempSlaveId > 247) {
-        this.$message.error('请输入有效的从站ID（1-247）');
+      if (
+        !this.tempSlaveId ||
+        isNaN(this.tempSlaveId) ||
+        this.tempSlaveId < 1 ||
+        this.tempSlaveId > 247
+      ) {
+        this.$message.error("请输入有效的从站ID（1-247）");
         return;
       }
 
@@ -1589,12 +1788,12 @@ export default {
         // 2. 调用后端接口保存（替换为你的实际接口）
         updateDeviceSlaveId({
           deviceSn: this.device.deviceSn,
-          slaveId: this.tempSlaveId
-        }).then(res=>{
-          if(res?.code==200){
+          slaveId: this.tempSlaveId,
+        }).then((res) => {
+          if (res?.code == 200) {
             this.$message.success("操作成功");
           }
-        })
+        });
 
         // 3. 保存成功后更新原数据，切回显示状态
         this.device.slaveId = this.tempSlaveId;
@@ -1606,19 +1805,19 @@ export default {
     // 添加新的物模型属性
     addThingModel() {
       const newItem = {
-        name: '',
-        identifier: '',
-        type: 'string',
-        accessMode: '',
-        description: '',
-        editing: true
+        name: "",
+        identifier: "",
+        type: "string",
+        accessMode: "",
+        description: "",
+        editing: true,
       };
       this.thingModelData.unshift(newItem);
       // this.$message.info('添加新属性，请编辑详细信息');
     },
     connectSocket() {
-      if (this.isConnected || !this.device || !this.device.id) return
-      this.connectionStatus = 'connecting'
+      if (this.isConnected || !this.device || !this.device.id) return;
+      this.connectionStatus = "connecting";
 
       try {
         // 方式1：直接使用工具函数获取 URL
@@ -1626,92 +1825,93 @@ export default {
         // this.websocket = new WebSocket(wsUrl)
 
         // 方式2：使用封装的创建函数（推荐）
-        this.websocket = createWebSocket('device', this.device.deviceSn, {
+        this.websocket = createWebSocket("device", this.device.deviceSn, {
           onOpen: () => {
-            this.isConnected = true
-            this.connectionStatus = 'connected'
-            this.connectTime = new Date()
+            this.isConnected = true;
+            this.connectionStatus = "connected";
+            this.connectTime = new Date();
           },
           onMessage: (event) => {
-            const message = JSON.parse(event.data)
-            this.updateRealTimeProperties(message)
+            const message = JSON.parse(event.data);
+            this.updateRealTimeProperties(message);
           },
           onClose: (event) => {
-            this.isConnected = false
-            this.connectionStatus = 'disconnected'
-            this.connectTime = null
-            const reason = event.reason || ''
+            this.isConnected = false;
+            this.connectionStatus = "disconnected";
+            this.connectTime = null;
+            const reason = event.reason || "";
           },
           onError: (error) => {
-            this.connectionStatus = 'error'
-            console.error('WebSocket error:', error)
-          }
-        })
-
+            this.connectionStatus = "error";
+            console.error("WebSocket error:", error);
+          },
+        });
       } catch (error) {
-        this.connectionStatus = 'error'
-        this.addMessage('系统', `连接失败: ${error.message}`, 'system')
+        this.connectionStatus = "error";
+        this.addMessage("系统", `连接失败: ${error.message}`, "system");
       }
     },
     addService() {
-      this.$message.info('添加服务功能')
+      this.$message.info("添加服务功能");
     },
 
     addEvent() {
-      this.$message.info('添加事件功能')
+      this.$message.info("添加事件功能");
     },
     deleteThingModel(index) {
-      this.$confirm('确定删除此物模型?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
+      this.$confirm("确定删除此物模型?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
       }).then(() => {
         this.thingModelData.splice(index, 1);
-        this.$message.success('删除成功');
+        this.$message.success("删除成功");
       });
     },
 
     saveDeviceAccessConfig() {
-      this.$message.success('设备接入配置已保存')
+      this.$message.success("设备接入配置已保存");
     },
 
     resetDeviceAccessConfig() {
       this.deviceAccessForm = {
-        protocol: 'MQTT',
-        authType: 'deviceSecret',
+        protocol: "MQTT",
+        authType: "deviceSecret",
         autoRegister: true,
-        mqttHost: 'mqtt://iot.example.com',
-        port: '1883'
-      }
-      this.$message.info('配置已重置')
+        mqttHost: "mqtt://iot.example.com",
+        port: "1883",
+      };
+      this.$message.info("配置已重置");
     },
     searchAlarms() {
-      this.getWarnRecordList()
+      this.getWarnRecordList();
     },
     searchFunctionRecord() {
-      this.getFunctionRecordList()
+      this.getFunctionRecordList();
     },
     viewAlarmDetail(row) {
-      this.jsonStr = row?.warnData
+      this.jsonStr = row?.warnData;
       this.jsonViewerVisible = true;
     },
 
     viewHistoryDetail(row) {
-      this.jsonStr = row?.properties
+      this.jsonStr = row?.properties;
       this.jsonViewerVisible = true;
     },
 
     /** 处理按钮操作 */
     handleStatus(row) {
-      dealWarmRecord(row?.id).then(() => {
-        this.getWarnRecordList();
-        this.$modal.msgSuccess("操作成功")
-      }).catch(() => {})
+      dealWarmRecord(row?.id)
+        .then(() => {
+          this.getWarnRecordList();
+          this.$modal.msgSuccess("操作成功");
+        })
+        .catch(() => {});
     },
 
     handlePageChange(page) {
-      this.pagination.current = page
-      this.getWarnRecordList()
+      this.pagination.current = page;
+      this.getWarnRecordList();
     },
     handleWarnSizeChange(val) {
       this.pagination.size = val;
@@ -1719,51 +1919,55 @@ export default {
       this.getWarnRecordList();
     },
     handleFunctionRecordPageChange(page) {
-      this.functionRecordParams.pageNum = page
-      this.getFunctionRecordList()
+      this.functionRecordParams.pageNum = page;
+      this.getFunctionRecordList();
     },
     handleFunctionSizeChange(val) {
       this.functionRecordParams.pageSize = val;
       this.functionRecordParams.pageNum = 1; // 重置为第一页
       this.getFunctionRecordList();
     },
-    getDeviceLastData(){
-      getDeviceLastData(this.device.deviceSn).then(res=>{
-        if(res.data) {
-          this.updateRealTimeProperties(res.data)
+    getDeviceLastData() {
+      getDeviceLastData(this.device.deviceSn).then((res) => {
+        if (res.data) {
+          this.updateRealTimeProperties(res.data);
         }
-      })
+      });
     },
     formatCondition(rule) {
-      const conditionStrings = rule.conditions.map(cond => {
-        let attr = this.attributeOptions.find(a => a.identifier === cond.attribute)?.name || cond.attribute;
-        if(cond.type=='device_online'){
-          attr = '上线';
+      const conditionStrings = rule.conditions.map((cond) => {
+        let attr =
+          this.attributeOptions.find((a) => a.identifier === cond.attribute)
+            ?.name || cond.attribute;
+        if (cond.type == "device_online") {
+          attr = "上线";
         }
-        if(cond.type=='device_offline'){
-          attr = '离线';
+        if (cond.type == "device_offline") {
+          attr = "离线";
         }
-        const op = this.operatorOptions.find(o => o.value === cond.operator)?.label || cond.operator;
+        const op =
+          this.operatorOptions.find((o) => o.value === cond.operator)?.label ||
+          cond.operator;
         return `${attr} ${op} ${cond.value}`;
       });
 
-      const relation = rule.relation === 'and' ? '并且' : '或者';
+      const relation = rule.relation === "and" ? "并且" : "或者";
       return conditionStrings.join(` ${relation} `);
     },
     addAlarmRule() {
       this.isEditing = false;
       this.currentRule = {
         id: null,
-        name: '',
-        conditions: [{ attribute: '', operator: '', value: '' }],
-        relation: 'and',
-        level: '1',
-        message: '',
+        name: "",
+        conditions: [{ attribute: "", operator: "", value: "" }],
+        relation: "and",
+        level: "1",
+        message: "",
         actions: [],
         enable: true,
         belongSn: this.device.deviceSn,
-        belongType: '1',
-        delayTime: 0
+        belongType: "1",
+        delayTime: 0,
       };
       this.dialogVisible = true;
       this.getFunctionList();
@@ -1777,17 +1981,21 @@ export default {
     saveAlarmRule() {
       // 验证表单
       if (!this.currentRule.name) {
-        this.$message.error('请输入告警规则名称');
+        this.$message.error("请输入告警规则名称");
         return;
       }
 
-      if (!this.currentRule.conditions.filter(c => c.type === 'device_property').every(c => c.attribute && c.operator && c.value)) {
-        this.$message.error('请完善所有告警条件');
+      if (
+        !this.currentRule.conditions
+          .filter((c) => c.type === "device_property")
+          .every((c) => c.attribute && c.operator && c.value)
+      ) {
+        this.$message.error("请完善所有告警条件");
         return;
       }
 
       if (!this.currentRule.message) {
-        this.$message.error('请输入告警消息');
+        this.$message.error("请输入告警消息");
         return;
       }
 
@@ -1798,45 +2006,49 @@ export default {
 
       if (this.isEditing) {
         // 更新现有规则
-        updateWarnConfig(this.currentRule).then(res=>{
-          if(res?.code===200){
+        updateWarnConfig(this.currentRule).then((res) => {
+          if (res?.code === 200) {
             this.getWarnConfigList();
           }
         });
       } else {
         // 添加新规则
-        addWarnConfig(this.currentRule).then(res=>{
-          if(res?.code===200){
+        addWarnConfig(this.currentRule).then((res) => {
+          if (res?.code === 200) {
             this.getWarnConfigList();
           }
         });
       }
       this.dialogVisible = false;
-      this.$message.success(this.isEditing ? '规则更新成功' : '规则添加成功');
+      this.$message.success(this.isEditing ? "规则更新成功" : "规则添加成功");
     },
     deleteAlarmRule(rule) {
-      this.$confirm('确定要删除这条告警规则吗?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
+      this.$confirm("确定要删除这条告警规则吗?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
       }).then(() => {
-        delWarnConfig(rule.id).then(res=>{
-          if(res?.code===200){
+        delWarnConfig(rule.id).then((res) => {
+          if (res?.code === 200) {
             this.getWarnConfigList();
-            this.$message.success('删除成功');
+            this.$message.success("删除成功");
           }
-        })
+        });
       });
     },
     toggleAlarmRule(rule) {
-      toggleRuleStatus(rule).then(res=>{
-        if(res?.code===200){
-          this.$message.success(`规则 ${rule.enable ? '启用' : '禁用'} 成功`);
+      toggleRuleStatus(rule).then((res) => {
+        if (res?.code === 200) {
+          this.$message.success(`规则 ${rule.enable ? "启用" : "禁用"} 成功`);
         }
-      })
+      });
     },
     addCondition() {
-      this.currentRule.conditions.push({ attribute: '', operator: '', value: '' });
+      this.currentRule.conditions.push({
+        attribute: "",
+        operator: "",
+        value: "",
+      });
     },
     removeCondition(index) {
       if (this.currentRule.conditions.length > 1) {
@@ -1845,75 +2057,77 @@ export default {
     },
     addAction() {
       this.currentRule.actions.push({
-        functionCode: '',
-        functionParams: ''
-      })
+        functionCode: "",
+        functionParams: "",
+      });
     },
     removeAction(index) {
-      this.currentRule.actions.splice(index, 1)
+      this.currentRule.actions.splice(index, 1);
     },
-    getPropertyByDeviceSn(){
-      getPropertyBySn(this.device.deviceSn).then(res=>{
+    getPropertyByDeviceSn() {
+      getPropertyBySn(this.device.deviceSn).then((res) => {
         this.attributeOptions = res.data;
-      })
+      });
     },
     // 打开历史数据弹窗
     openHistoryData() {
-      this.historyDialogVisible = true
+      this.historyDialogVisible = true;
       //默认开始和结束时间为当天 0 点到当天 23 点
-      const startTime = formatDateTime(new Date().setHours(0, 0, 0, 0))
-      const endTime = formatDateTime(new Date().setHours(23, 59, 59, 999))
-      this.historyParams.rangeDate = [startTime, endTime]
-      this.loadHistoryData()
+      const startTime = formatDateTime(new Date().setHours(0, 0, 0, 0));
+      const endTime = formatDateTime(new Date().setHours(23, 59, 59, 999));
+      this.historyParams.rangeDate = [startTime, endTime];
+      this.loadHistoryData();
     },
-    loadHistoryData(){
-      this.historyLoading = true
-      this.historyParams.deviceSn = this.device.deviceSn
-      this.historyParams.pageNum = this.historyPagination.current
-      this.historyParams.pageSize = this.historyPagination.size
+    loadHistoryData() {
+      this.historyLoading = true;
+      this.historyParams.deviceSn = this.device.deviceSn;
+      this.historyParams.pageNum = this.historyPagination.current;
+      this.historyParams.pageSize = this.historyPagination.size;
 
       // 将 rangeDate 数组转换为 startTime 和 endTime
-      if (this.historyParams.rangeDate && this.historyParams.rangeDate.length === 2) {
-        this.historyParams.startTime = this.historyParams.rangeDate[0]
-        this.historyParams.endTime = this.historyParams.rangeDate[1]
+      if (
+        this.historyParams.rangeDate &&
+        this.historyParams.rangeDate.length === 2
+      ) {
+        this.historyParams.startTime = this.historyParams.rangeDate[0];
+        this.historyParams.endTime = this.historyParams.rangeDate[1];
       }
 
-      listDeviceLogs(this.historyParams).then(res=>{
-        this.historyPagination.total = res?.total
+      listDeviceLogs(this.historyParams).then((res) => {
+        this.historyPagination.total = res?.total;
         this.historyData = res?.rows;
-        this.historyLoading = false
-      })
+        this.historyLoading = false;
+      });
     },
     // 分页变化
     handleHistoryPageChange(page) {
-      this.historyPagination.current = page
-      this.loadHistoryData()
+      this.historyPagination.current = page;
+      this.loadHistoryData();
     },
 
     // 重置搜索条件
     resetHistorySearch() {
-      this.historyParams = {
-      }
-      this.historyPagination.current = 1
-      this.loadHistoryData()
+      this.historyParams = {};
+      this.historyPagination.current = 1;
+      this.loadHistoryData();
     },
     // 获取消息类型文本
     getLogTypeText(logType) {
-      return this.logTypeMap[logType] || logType
+      return this.logTypeMap[logType] || logType;
     },
 
     // 获取标签类型
     getLogTypeTagType(logType) {
-      return this.logTypeTagMap[logType] || 'info'
+      return this.logTypeTagMap[logType] || "info";
     },
 
-    handleSizeChange(size){
-      this.historyPagination.size = size
-      this.historyPagination.current = 1
-      this.loadHistoryData()
-    }
-  }
-}
+    handleSizeChange(size) {
+      this.historyPagination.size = size;
+      this.historyPagination.current = 1;
+      this.loadHistoryData();
+    },
+  },
+};
 </script>
 
 <style scoped lang="scss">
@@ -1956,7 +2170,7 @@ export default {
   font-size: 28px;
   font-weight: 700;
   color: #303133;
-  background: linear-gradient(135deg, #000000 0%, #66B1FF 100%);
+  background: linear-gradient(135deg, #000000 0%, #66b1ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1979,7 +2193,7 @@ export default {
   background: #f8f9fa;
   border-radius: 8px;
   transition: all 0.3s ease;
-  border-left: 4px solid #409EFF;
+  border-left: 4px solid #409eff;
 }
 
 .stat-item:hover {
@@ -1998,12 +2212,12 @@ export default {
   justify-content: center;
   margin-right: 16px;
   font-size: 20px;
-  color: #409EFF;
+  color: #409eff;
 }
 
 .stat-icon.online {
   background: #f0f9ff;
-  color: #67C23A;
+  color: #67c23a;
 }
 
 .stat-content {
@@ -2062,14 +2276,14 @@ export default {
 }
 
 .custom-tabs >>> .el-tabs__item.is-active {
-  color: #409EFF;
+  color: #409eff;
   font-weight: 600;
 }
 
 .custom-tabs >>> .el-tabs__active-bar {
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(135deg, #409EFF 0%, #66B1FF 100%);
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
 }
 
 .tab-content {
@@ -2092,14 +2306,14 @@ export default {
 }
 
 .tab-title::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 4px;
   height: 20px;
-  background: linear-gradient(135deg, #409EFF 0%, #66B1FF 100%);
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
   border-radius: 2px;
 }
 
@@ -2152,7 +2366,8 @@ export default {
   max-width: 800px;
 }
 
-.config-select, .config-input {
+.config-select,
+.config-input {
   width: 300px;
 }
 
@@ -2168,7 +2383,8 @@ export default {
   border-top: 1px solid #ebeef5;
 }
 
-.save-btn, .reset-btn {
+.save-btn,
+.reset-btn {
   border-radius: 8px;
   padding: 10px 20px;
   font-weight: 500;
@@ -2197,7 +2413,8 @@ export default {
   gap: 16px;
 }
 
-.filter-date, .filter-select {
+.filter-date,
+.filter-select {
   width: 200px;
 }
 
@@ -2211,7 +2428,7 @@ export default {
   background: #f5f7fa;
   padding: 4px 8px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   color: #e74c3c;
 }
 
@@ -2247,7 +2464,8 @@ export default {
     flex-direction: column;
   }
 
-  .filter-date, .filter-select {
+  .filter-date,
+  .filter-select {
     width: 100%;
   }
 }
@@ -2329,12 +2547,12 @@ export default {
   align-items: flex-start;
 }
 .command-textarea {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   font-size: 14px;
 }
 
 .command-textarea ::v-deep(.el-textarea__inner) {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   font-size: 14px;
   line-height: 1.5;
   border: 1px solid #dcdfe6;
@@ -2342,7 +2560,7 @@ export default {
 }
 
 .command-textarea ::v-deep(.el-textarea__inner:focus) {
-  border-color: #409EFF;
+  border-color: #409eff;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 
@@ -2428,7 +2646,7 @@ export default {
   gap: 12px;
   flex-wrap: wrap;
 }
-.config-input{
+.config-input {
   display: flex;
   flex-wrap: wrap;
   max-width: 100%;
