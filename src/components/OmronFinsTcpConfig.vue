@@ -184,7 +184,7 @@ import {
   addOmronFinsTcp,
   getOmronFinsTcp,
 } from "@/api/business/omronFins";
-import { readOmronFinsTcpSwitchByProduct } from "@/api/business/omronFins";
+import { readOmronFinsTcpSwitchByDevice } from "@/api/business/omronFins";
 
 export default {
   name: "OmronFinsTcpConfig",
@@ -235,7 +235,7 @@ export default {
     },
     // OmronFinsTcp功能开关切换事件
     handleOmronFinsTcpStatusChange(enabled) {
-      readOmronFinsTcpSwitchByProduct({
+      readOmronFinsTcpSwitchByDevice({
         deviceSn: this.deviceSn,
         isOpen: enabled == true ? "1" : "0",
       }).then((res) => {

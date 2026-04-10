@@ -187,7 +187,7 @@
               v-model="selectProtocolId"
               placeholder="请选择"
               @change="handleProtocolChange"
-              :disabled="!form.netType || form.protocolId"
+              :disabled="!form.netType || !!form.protocolId"
             >
               <el-option
                 v-for="item in filteredProtocolList"
@@ -485,12 +485,8 @@
                   />
                 </el-form-item>
               </template>
-              <template v-if="form.netType === 'DATABASE_TCP'">
-                <el-form-item
-                  label="数据库类型:"
-                  prop="dynamicConfig.dbType"
-                  required
-                >
+              <template v-else-if="form.netType === 'DATABASE_TCP'">
+                <el-form-item label="数据库类型:" prop="dynamicConfig.dbType">
                   <el-select v-model="form.dynamicConfig.dbType">
                     <el-option label="MySQL" value="mysql" />
                     <el-option label="PostgreSQL" value="postgresql" />
@@ -543,7 +539,6 @@
                 <el-form-item
                   label="选择数据表:"
                   prop="dynamicConfig.tableName"
-                  required
                 >
                   <el-select
                     v-model="form.dynamicConfig.tableName"
@@ -821,6 +816,95 @@ export default {
               },
             ],
           };
+        case "OMRONFINS_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
+        case "S71200_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
+        case "DATABASE_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.dbType": [
+              {
+                required: true,
+                message: "数据库类型不能为空",
+                trigger: "change",
+              },
+            ],
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.username": [
+              { required: true, message: "用户名不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.password": [
+              { required: true, message: "密码不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.databaseName": [
+              {
+                required: true,
+                message: "数据库名称不能为空",
+                trigger: "blur",
+              },
+            ],
+            "dynamicConfig.tableName": [
+              { required: true, message: "数据表不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
         default:
           return baseRules;
       }
@@ -904,9 +988,11 @@ export default {
       // 根据网络类型过滤协议列表
       this.filterProtocols(netType);
       // 清除当前表单校验状态
-      if (this.$refs.form) {
-        this.$refs.form.clearValidate();
-      }
+      this.$nextTick(() => {
+        if (this.$refs.form) {
+          this.$refs.form.clearValidate();
+        }
+      });
 
       // 根据网络类型设置默认值
       if (netType === "MQTT_CLIENT") {
@@ -958,7 +1044,11 @@ export default {
           port: "10883",
           path: "/**",
         };
-      } else if (netType === "MODBUS_TCP") {
+      } else if (
+        netType === "MODBUS_TCP" ||
+        netType === "OMRONFINS_TCP" ||
+        netType === "DATABASE_TCP"
+      ) {
         this.form.dynamicConfig = {
           timeout: 3000,
         };
@@ -968,6 +1058,11 @@ export default {
           rack: 0,
           slot: 1,
         };
+      }
+
+      // 清除当前表单校验状态（在设置默认值之后）
+      if (this.$refs.form) {
+        this.$refs.form.clearValidate();
       }
     },
     /** 匿名开关变化处理 */
