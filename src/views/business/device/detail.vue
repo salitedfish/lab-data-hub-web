@@ -109,7 +109,7 @@
                 <div class="property-name">{{ property.name }}</div>
                 <div class="property-value">
                   <span class="value"
-                    >{{ property.value || "--" }}{{ property.unit }}</span
+                    >{{ displayPropertyValue(property.value) }}{{ property.unit }}</span
                   >
                 </div>
                 <div class="property-time">{{ property.updateTime }}</div>
@@ -193,6 +193,56 @@
                     v-model="scope.row.unit"
                     size="mini"
                     placeholder="请输入单位"
+                  />
+                </template>
+              </el-table-column>
+              <!-- 字节序 - 下拉选择 -->
+              <el-table-column prop="byteOrder" label="字节序" width="120">
+                <template slot-scope="scope">
+                  <el-select
+                    v-model="scope.row.byteOrder"
+                    size="mini"
+                    placeholder="选择字节序"
+                  >
+                    <el-option label="大端" value="big" />
+                    <el-option label="小端" value="little" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <!-- 有符号 - 下拉选择 -->
+              <el-table-column prop="isSigned" label="有符号" width="110">
+                <template slot-scope="scope">
+                  <el-select
+                    v-model="scope.row.isSigned"
+                    size="mini"
+                    placeholder="选择符号"
+                  >
+                    <el-option label="有符号" value="1" />
+                    <el-option label="无符号" value="0" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <!-- 缩放 - 可编辑 -->
+              <el-table-column prop="scale" label="缩放" width="130">
+                <template slot-scope="scope">
+                  <el-input-number
+                    v-model="scope.row.scale"
+                    size="mini"
+                    :step="0.1"
+                    :precision="6"
+                    controls-position="right"
+                  />
+                </template>
+              </el-table-column>
+              <!-- 换算偏移（算术：value=原始值×缩放+偏移） - 可编辑 -->
+              <el-table-column prop="offset" label="换算偏移" width="130">
+                <template slot-scope="scope">
+                  <el-input-number
+                    v-model="scope.row.offset"
+                    size="mini"
+                    :step="0.1"
+                    :precision="6"
+                    controls-position="right"
                   />
                 </template>
               </el-table-column>
@@ -1724,6 +1774,12 @@ export default {
       row.editing = false;
       this.$message.info("已取消编辑");
     },
+    // 实时值展示：0/false 是合法值，不能当空值显示
+    displayPropertyValue(value) {
+      return value == null || (typeof value == "string" && value == "")
+        ? "--"
+        : value;
+    },
     // 更新实时属性数据
     updateRealTimeProperties(realTimeData) {
       // 创建新的实时属性数组，确保thingModelData中的所有属性都显示
@@ -1807,6 +1863,11 @@ export default {
       const newItem = {
         name: "",
         identifier: "",
+        dataType: "string",
+        byteOrder: "big",
+        isSigned: "1",
+        scale: 1,
+        offset: 0,
         type: "string",
         accessMode: "",
         description: "",

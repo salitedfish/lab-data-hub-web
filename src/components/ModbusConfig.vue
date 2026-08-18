@@ -112,7 +112,7 @@
           <el-form-item label="寄存器范围" prop="registerRange" required>
             <el-input
               v-model="modbusForm.registerRange"
-              placeholder="逗号分隔如：0,1-5,6,7-10"
+              placeholder="单个区间，如：0 或 0-3（一个字一个 16 位，浮点/32 位整数占 2 个字）"
             />
           </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
@@ -220,6 +220,24 @@ export default {
     },
     /** 提交按钮 */
     submitModbusForm() {
+      // 校验寄存器范围：一个标识只对应一个读取点位，只允许单段区间（如 0 或 0-3）
+      const range = this.modbusForm.registerRange == null
+        ? ""
+        : this.modbusForm.registerRange.trim();
+      const rangeParts = range.split("-");
+      const rangeValid =
+        range != "" &&
+        rangeParts.length <= 2 &&
+        /^\d+$/.test(rangeParts[0]) &&
+        (rangeParts.length == 1 || /^\d+$/.test(rangeParts[1])) &&
+        (rangeParts.length == 1 ||
+          parseInt(rangeParts[1]) >= parseInt(rangeParts[0]));
+      if (!rangeValid) {
+        this.$message.error(
+          "寄存器范围格式不正确，请输入单个区间，如：0 或 0-3"
+        );
+        return;
+      }
       this.$refs["modbusForm"].validate((valid) => {
         if (valid) {
           if (this.modbusForm.id != null) {

@@ -140,7 +140,7 @@
             />
           </el-form-item>
           <el-form-item
-            label="偏移量"
+            label="位偏移"
             prop="bitOffset"
             :required="s71200TcpForm.blockType == 'DBX'"
           >
