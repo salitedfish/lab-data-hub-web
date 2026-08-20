@@ -173,6 +173,10 @@
                 label="OMRONFINS_TCP"
                 value="OMRONFINS_TCP"
               ></el-option>
+              <el-option
+                label="BROTHER_TCP"
+                value="BROTHER_TCP"
+              ></el-option>
               <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
@@ -431,11 +435,12 @@
                 </el-form-item>
               </template>
 
-              <!-- Modbus TCP 配置 -->
+              <!-- Modbus TCP / Fins / Brother 配置 -->
               <template
                 v-else-if="
                   form.netType === 'MODBUS_TCP' ||
-                  form.netType === 'OMRONFINS_TCP'
+                  form.netType === 'OMRONFINS_TCP' ||
+                  form.netType === 'BROTHER_TCP'
                 "
               >
                 <el-form-item label="服务器IP" prop="dynamicConfig.ipAddr">
@@ -838,6 +843,28 @@ export default {
               },
             ],
           };
+        case "BROTHER_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
         case "S71200_TCP":
           return {
             ...baseRules,
@@ -1047,6 +1074,7 @@ export default {
       } else if (
         netType === "MODBUS_TCP" ||
         netType === "OMRONFINS_TCP" ||
+        netType === "BROTHER_TCP" ||
         netType === "DATABASE_TCP"
       ) {
         this.form.dynamicConfig = {

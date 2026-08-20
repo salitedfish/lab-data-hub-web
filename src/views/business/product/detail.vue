@@ -358,6 +358,16 @@
           />
         </el-tab-pane>
         <el-tab-pane
+          label="Brother_TCP配置"
+          name="brotherTcpConfig"
+          v-if="component?.netType == 'BROTHER_TCP'"
+        >
+          <BrotherTcpConfig
+            :device-sn="product.productSn"
+            :isProductIn="true"
+          />
+        </el-tab-pane>
+        <el-tab-pane
           label="Database_TCP配置"
           name="databaseTcpConfig"
           v-if="component?.netType == 'DATABASE_TCP'"
@@ -1041,6 +1051,7 @@ import ModbusConfig from "@/components/ModbusConfig";
 import S71200TcpConfig from "@/components/S71200TcpConfig";
 import OmronFinsTcpConfig from "@/components/OmronFinsTcpConfig";
 import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
+import BrotherTcpConfig from "@/components/BrotherTcpConfig";
 
 export default {
   name: "ProductDetail",
@@ -1050,6 +1061,7 @@ export default {
     S71200TcpConfig,
     OmronFinsTcpConfig,
     DatabaseTcpConfig,
+    BrotherTcpConfig,
   },
   created() {
     this.productId = this.$route.query.id;
