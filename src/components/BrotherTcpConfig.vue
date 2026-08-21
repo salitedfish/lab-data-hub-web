@@ -116,36 +116,106 @@
           :model="brotherTcpForm"
           label-width="140px"
         >
+          <!-- 语义点位选择：先选点位类型，再选具体点位，自动填 标识/数据区/行号/字段序号 -->
+          <el-form-item label="点位类型" prop="pointType" required v-if="!manualMode">
+            <el-select
+              v-model="brotherTcpForm.pointType"
+              placeholder="先选择点位类型，如：机械坐标"
+              style="width: 100%"
+              @change="onPointTypeChange"
+            >
+              <el-option
+                v-for="t in pointTypes"
+                :key="t.value"
+                :label="t.label"
+                :value="t.value"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="点位" prop="pointKey" required v-if="!manualMode">
+            <el-select
+              v-model="brotherTcpForm.pointKey"
+              placeholder="再选择具体点位，如：机械坐标 X / 主轴转速"
+              filterable
+              clearable
+              style="width: 100%"
+              @change="onPointKeyChange"
+            >
+              <el-option
+                v-for="p in pointsByType"
+                :key="p.key"
+                :label="p.name"
+                :value="p.key"
+              >
+                <span>{{ p.name }}</span>
+                <span class="pt-symbol">{{ p.symbol }}</span>
+              </el-option>
+            </el-select>
+            <div class="point-tip">
+              选点后自动填入「标识 / 地址」并展示下方地址信息，无需了解协议细节；可按名称搜索。
+            </div>
+          </el-form-item>
+          <!-- 选中点位背后的地址信息展示 -->
+          <div class="point-address" v-if="!manualMode && selectedPoint">
+            <div class="addr-row">
+              <span class="addr-label">符号地址</span>{{ selectedPoint.symbol }}
+            </div>
+            <div class="addr-row">
+              <span class="addr-label">协议地址</span
+              >{{ brotherTcpAddress(selectedPoint) }}
+            </div>
+            <div class="addr-row">
+              <span class="addr-label">建议类型</span>{{ selectedPoint.dataType }}
+            </div>
+            <div class="addr-row" v-if="selectedPoint.desc">
+              <span class="addr-label">说明</span>{{ selectedPoint.desc }}
+            </div>
+          </div>
           <el-form-item label="标识" prop="code" required>
             <el-input
               v-model="brotherTcpForm.code"
-              placeholder="物模型属性标识，如 PDSP.4.1"
+              placeholder="选点位后自动填入，如 machine_x"
             />
+            <div class="code-tip">
+              标识需与「物模型」tab 中属性标识一致。选点位后已自动填入建议标识，请在物模型里新建同名属性（数据类型参考上方建议值）。
+            </div>
           </el-form-item>
-          <el-form-item label="数据区" prop="dataArea" required>
+          <!-- 手动指定地址入口（ALARM/PRD3/WKCNTR 及自定义地址走这里） -->
+          <div class="manual-toggle">
+            <el-link type="primary" :underline="false" @click="toggleManualMode">
+              {{ manualMode ? "返回点选点位" : "需要自定义地址？手动指定" }}
+            </el-link>
+          </div>
+          <el-form-item label="数据区" prop="dataArea" required v-if="manualMode">
             <el-select
               v-model="brotherTcpForm.dataArea"
               placeholder="请选择数据区"
               style="width: 100%"
             >
-              <el-option label="PDSP" value="PDSP"></el-option>
-              <el-option label="ALARM" value="ALARM"></el-option>
-              <el-option label="PRD3" value="PRD3"></el-option>
-              <el-option label="WKCNTR" value="WKCNTR"></el-option>
+              <!-- 数据区下拉：从 dataAreaOptions 渲染，value 即 Brother LOD 数据区名 -->
+              <el-option
+                v-for="item in dataAreaOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              ></el-option>
             </el-select>
+            <div class="data-area-tip" v-if="brotherTcpForm.dataArea">
+              数据区说明：{{ dataAreaDesc }}
+            </div>
           </el-form-item>
-          <el-form-item label="行号" prop="rowNumber" required>
+          <el-form-item label="行号" prop="rowNumber" required v-if="manualMode">
             <el-input
               v-model="brotherTcpForm.rowNumber"
               type="number"
-              placeholder="对应点表行顺序，1起，如 4"
+              placeholder="对应数据区点表行顺序，1起，如 4"
             />
           </el-form-item>
-          <el-form-item label="字段序号" prop="fieldIndex" required>
+          <el-form-item label="字段序号" prop="fieldIndex" required v-if="manualMode">
             <el-input
               v-model="brotherTcpForm.fieldIndex"
               type="number"
-              placeholder="行内第几个值，1起，如 1"
+              placeholder="1起，字段1=行 Symbol 后第1个值，如采 X 轴填 1"
             />
           </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
@@ -163,22 +233,6 @@
             />
           </el-form-item>
         </el-form>
-        <!-- PDSP 点表参考 -->
-        <el-collapse v-model="pointTableOpen" class="point-table">
-          <el-collapse-item
-            title="PDSP 点表行号参考（LOD PDSP 整块读取，按行号+字段序号取值）"
-            name="1"
-          >
-            <el-table :data="pdspPointTable" size="mini" border>
-              <el-table-column prop="rowNumber" label="行号" width="60" />
-              <el-table-column prop="symbol" label="Symbol" width="70" />
-              <el-table-column prop="desc" label="说明" />
-            </el-table>
-            <div class="point-tip">
-              字段序号：行内第1个值=字段1（如 P01 行字段1=X 轴机械坐标），依次类推
-            </div>
-          </el-collapse-item>
-        </el-collapse>
         <div
           style="
             display: flex;
@@ -213,6 +267,13 @@ import {
   getBrotherTcp,
 } from "@/api/business/brotherTcp";
 import { readBrotherTcpSwitchByDevice } from "@/api/business/brotherTcp";
+// 内置 PDSP 点位表：语义点位 → 协议地址（数据区.行号.字段序号），数据来源见 utils/brotherTcpPoints.js
+import {
+  BROTHER_TCP_POINT_TABLE,
+  BROTHER_TCP_ROW_LABELS,
+  findBrotherTcpPoint,
+  brotherTcpAddress as toAddress,
+} from "@/utils/brotherTcpPoints";
 
 export default {
   name: "BrotherTcpConfig",
@@ -240,7 +301,10 @@ export default {
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
-      pointTableOpen: ["1"],
+      // 点位选择模式：false=点选点位（自动填地址），true=手动输入数据区/行号/字段序号
+      manualMode: false,
+      // 当前选中的点位对象（用于地址信息展示）
+      selectedPoint: null,
       brotherTcpParams: {
         pageNum: 1,
         pageSize: 10,
@@ -251,18 +315,55 @@ export default {
       },
       brotherTcpForm: {},
       brotherTcpList: [],
-      // PDSP 点表行号参考（LOD PDSP 返回行按点表 Number 顺序排列，行号=Number）
-      pdspPointTable: [
-        { rowNumber: 1, symbol: "L01", desc: "局部坐标" },
-        { rowNumber: 2, symbol: "G01", desc: "G 坐标" },
-        { rowNumber: 3, symbol: "M01", desc: "机械相对坐标" },
-        { rowNumber: 4, symbol: "P01", desc: "机械坐标 P01" },
-        { rowNumber: 5, symbol: "P02", desc: "机械坐标 P02" },
-        { rowNumber: 6, symbol: "P03", desc: "机械坐标 P03" },
-        { rowNumber: 7, symbol: "P04", desc: "机械坐标 P04" },
-        { rowNumber: 8, symbol: "X01", desc: "X01 行" },
+      // 数据区选项及含义说明（对应 Brother NC 通讯手册各数据区点表）
+      dataAreaOptions: [
+        { value: "PDSP", label: "PDSP", desc: "位置显示：语言、G/M 代码组、机械/相对/绝对/剩余距离坐标、进给/主轴/刀具/倍率等状态（推荐用上方点位下拉选择）" },
+        { value: "ALARM", label: "ALARM", desc: "报警：机床当前及历史报警信息" },
+        { value: "PRD3", label: "PRD3", desc: "生产信息：产量、加工件数、加工时间等统计" },
+        { value: "WKCNTR", label: "WKCNTR", desc: "工件计数：累计加工件数等计数器值" },
+        { value: "MEM", label: "MEM", desc: "运行状态：程序号、加工状态、内托盘、操作模式等（推荐用上方点位下拉选择）" },
+        { value: "PANEL", label: "PANEL", desc: "面板状态：门开关、面板开关、倍率、急停、门互锁、数据保护等（推荐用上方点位下拉选择）" },
+        { value: "VER", label: "VER", desc: "设备信息：机型、版本号、机身号（静态信息，采集一次即可）" },
       ],
     };
+  },
+  computed: {
+    // 当前所选数据区的含义说明
+    dataAreaDesc() {
+      const item = this.dataAreaOptions.find(
+        (o) => o.value == this.brotherTcpForm.dataArea
+      );
+      return item ? item.desc : "";
+    },
+    // 点位类型列表（按 数据区.行号 分组，如 PDSP.4 P01 机械坐标 / WKCNTR.1 A01 工件计数1）
+    pointTypes() {
+      const types = [];
+      BROTHER_TCP_POINT_TABLE.forEach((p) => {
+        const value = p.dataArea + "|" + p.rowNumber;
+        if (!types.find((t) => t.value == value)) {
+          types.push({
+            value: value,
+            label:
+              (BROTHER_TCP_ROW_LABELS[p.dataArea] || {})[p.rowNumber] ||
+              p.dataArea + " 第" + p.rowNumber + "行",
+          });
+        }
+      });
+      return types;
+    },
+    // 当前点位类型下的点位列表（未选类型时展示全部）
+    pointsByType() {
+      if (
+        this.brotherTcpForm.pointType == null ||
+        this.brotherTcpForm.pointType == ""
+      ) {
+        return BROTHER_TCP_POINT_TABLE;
+      }
+      const parts = this.brotherTcpForm.pointType.split("|");
+      return BROTHER_TCP_POINT_TABLE.filter(
+        (p) => p.dataArea == parts[0] && p.rowNumber == parts[1]
+      );
+    },
   },
   created() {
     this.brotherTcpParams.belongSn = this.deviceSn;
@@ -297,6 +398,10 @@ export default {
     },
     /** 提交按钮（JS 校验必填，不使用表单 rules） */
     async submitBrotherTcpForm() {
+      if (!this.manualMode && !this.selectedPoint) {
+        this.$message.error("请选择点位");
+        return;
+      }
       if (this.brotherTcpForm.code == null || this.brotherTcpForm.code == "") {
         this.$message.error("标识不能为空");
         return;
@@ -367,10 +472,61 @@ export default {
         dataArea: null,
         rowNumber: null,
         fieldIndex: null,
+        pointType: null,
+        pointKey: null,
         intervalTime: null,
         delayTime: null,
       };
+      // 默认走点位选择模式，清空已选点位
+      this.manualMode = false;
+      this.selectedPoint = null;
       this.resetForm("brotherTcpForm");
+    },
+    // 切换点位类型（值形如 "PDSP|4" / "WKCNTR|1"）：清空已选点位，等待用户重选
+    onPointTypeChange(value) {
+      this.brotherTcpForm.pointKey = null;
+      this.selectedPoint = null;
+    },
+    // 点位选择：自动填 标识/数据区/行号/字段序号
+    onPointKeyChange(key) {
+      if (key == null || key == "") {
+        // 用户清空选择，仅清空点位
+        this.selectedPoint = null;
+        return;
+      }
+      const p = BROTHER_TCP_POINT_TABLE.find((x) => x.key == key);
+      if (!p) {
+        return;
+      }
+      this.selectedPoint = p;
+      this.brotherTcpForm.dataArea = p.dataArea;
+      this.brotherTcpForm.rowNumber = p.rowNumber;
+      this.brotherTcpForm.fieldIndex = p.fieldIndex;
+      this.brotherTcpForm.code = p.key;
+    },
+    // 手动/点位模式切换；切回点位模式时若当前地址命中点表则预选
+    toggleManualMode() {
+      this.manualMode = !this.manualMode;
+      if (!this.manualMode) {
+        const p = findBrotherTcpPoint(
+          this.brotherTcpForm.dataArea,
+          this.brotherTcpForm.rowNumber,
+          this.brotherTcpForm.fieldIndex
+        );
+        if (p) {
+          this.selectedPoint = p;
+          this.brotherTcpForm.pointType = p.dataArea + "|" + p.rowNumber;
+          this.brotherTcpForm.pointKey = p.key;
+        } else {
+          this.selectedPoint = null;
+          this.brotherTcpForm.pointType = null;
+          this.brotherTcpForm.pointKey = null;
+        }
+      }
+    },
+    // 协议地址字符串（数据区.行号.字段序号，如 PDSP.4.1），模板展示用
+    brotherTcpAddress(point) {
+      return toAddress(point);
     },
     resetForm(formName) {
       if (this.$refs[formName]) {
@@ -383,10 +539,15 @@ export default {
       this.resetAddBrotherTcpConfig();
       this.brotherTcpForm.belongSn = this.deviceSn;
       this.brotherTcpForm.belongType = "0";
-      // 默认 PDSP.P01.X 机械坐标，便于对照点表
+      // 默认预选 P01.X 机械坐标 X，便于体验点选
+      const defaultPoint = findBrotherTcpPoint("PDSP", 4, 1);
+      this.selectedPoint = defaultPoint;
+      this.brotherTcpForm.pointType = defaultPoint.dataArea + "|" + defaultPoint.rowNumber;
+      this.brotherTcpForm.pointKey = defaultPoint.key;
       this.brotherTcpForm.dataArea = "PDSP";
       this.brotherTcpForm.rowNumber = 4;
       this.brotherTcpForm.fieldIndex = 1;
+      this.brotherTcpForm.code = defaultPoint.key;
       this.brotherTcpForm.intervalTime = 10;
       this.brotherTcpForm.delayTime = 100;
     },
@@ -397,7 +558,31 @@ export default {
         if (res?.code == 200) {
           this.brotherTcpIsEdit = true;
           this.openAddBrotherTcp = true;
-          this.brotherTcpForm = res.data;
+          this.brotherTcpForm = Object.assign(
+            { pointKey: null, pointType: null },
+            res.data || {}
+          );
+          // 地址命中点表则预选点位并展示地址；未命中（ALARM/PRD3/WKCNTR 等）走手动输入
+          const p = findBrotherTcpPoint(
+            this.brotherTcpForm.dataArea,
+            this.brotherTcpForm.rowNumber,
+            this.brotherTcpForm.fieldIndex
+          );
+          if (p) {
+            this.manualMode = false;
+            this.selectedPoint = p;
+            this.brotherTcpForm.pointType = p.dataArea + "|" + p.rowNumber;
+            this.brotherTcpForm.pointKey = p.key;
+            // 保留用户已有标识；标识为空时补建议标识
+            if (!this.brotherTcpForm.code) {
+              this.brotherTcpForm.code = p.key;
+            }
+          } else {
+            this.manualMode = true;
+            this.selectedPoint = null;
+            this.brotherTcpForm.pointType = null;
+            this.brotherTcpForm.pointKey = null;
+          }
         }
       } catch (e) {
         console.error("查询Brother配置失败", e);
@@ -483,12 +668,59 @@ export default {
   padding: 20px;
 }
 
-.point-table {
-  margin: 20px 0;
+/* 选中点位后的地址信息展示块（左对齐表单输入区，label 宽 140px） */
+.point-address {
+  margin: -4px 0 12px 140px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #333;
 }
 
+.addr-row {
+  display: flex;
+}
+
+.addr-label {
+  display: inline-block;
+  width: 70px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+/* 标识与物模型属性一致性的提示 */
+.code-tip {
+  margin-top: 6px;
+  color: #999;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 点位下拉选项：名称 + 符号地址（右侧灰显） */
+.pt-symbol {
+  float: right;
+  color: #999;
+  font-size: 12px;
+  padding-left: 16px;
+}
+
+/* 点位选择下方提示 */
 .point-tip {
-  margin-top: 8px;
+  margin-top: 6px;
+  color: #999;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 手动/点位模式切换入口 */
+.manual-toggle {
+  margin: 0 0 12px 140px;
+}
+
+.data-area-tip {
+  margin-top: 6px;
   color: #999;
   font-size: 12px;
   line-height: 1.6;

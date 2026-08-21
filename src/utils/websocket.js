@@ -7,7 +7,15 @@
  * @returns {string} WebSocket URL
  */
 export function getWebSocketUrl(type, id = '') {
-  const baseUrl = process.env.VUE_APP_WS_BASE_URL || 'ws://127.0.0.1:8080'
+  const configured = (process.env.VUE_APP_WS_BASE_URL || '').trim()
+  // 显式配置了 WS 地址则直连；未配置时跟随当前页面地址（开发环境经 devServer /ws 代理转发到后端，生产环境同源）
+  let baseUrl
+  if (configured) {
+    baseUrl = configured
+  } else {
+    const scheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
+    baseUrl = scheme + window.location.host
+  }
   const pathMap = {
     component: '/ws/component/',
     device: '/ws/device/',

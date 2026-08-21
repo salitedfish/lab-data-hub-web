@@ -1174,6 +1174,16 @@
               label="消息内容"
               show-overflow-tooltip
             />
+            <el-table-column label="属性名" width="150" show-overflow-tooltip>
+              <template slot-scope="scope">
+                {{ getHistoryPropertyNames(scope.row) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="属性值" width="150" show-overflow-tooltip>
+              <template slot-scope="scope">
+                {{ getHistoryPropertyValues(scope.row) }}
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="200" fixed="right">
               <template slot-scope="scope">
                 <el-button
@@ -2171,6 +2181,32 @@ export default {
         this.historyData = res?.rows;
         this.historyLoading = false;
       });
+    },
+    // 解析日志行 properties 字段（存的是 DecodeMessage JSON，含 properties 属性对象，如 {"properties":{"machine_x":123}}）
+    parseHistoryProperties(row) {
+      try {
+        const parsed = JSON.parse(row?.properties || "{}");
+        return parsed && parsed.properties ? parsed.properties : {};
+      } catch (error) {
+        return {};
+      }
+    },
+    // 属性名：取 properties 对象各 key，映射物模型显示名，多个以顿号连接
+    getHistoryPropertyNames(row) {
+      const props = this.parseHistoryProperties(row);
+      const names = Object.keys(props).map((id) => {
+        const model = this.thingModelData.find((p) => p.identifier == id);
+        return model ? model.name : id;
+      });
+      return names.length ? names.join("、") : "--";
+    },
+    // 属性值：取 properties 对象各 value，多个以顿号连接
+    getHistoryPropertyValues(row) {
+      const props = this.parseHistoryProperties(row);
+      const values = Object.keys(props).map((id) =>
+        this.displayPropertyValue(props[id])
+      );
+      return values.length ? values.join("、") : "--";
     },
     // 分页变化
     handleHistoryPageChange(page) {
