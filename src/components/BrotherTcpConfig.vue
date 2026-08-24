@@ -100,7 +100,8 @@
         :page-size="brotherTcpParams.pageSize"
         :total="brotherTcpParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="getBrotherTcpConfigByDeviceSn"
+        @current-change="(pageNum) => { brotherTcpParams.pageNum = pageNum; getBrotherTcpConfigByDeviceSn(); }"
+        @size-change="(size) => { brotherTcpParams.pageSize = size; brotherTcpParams.pageNum = 1; getBrotherTcpConfigByDeviceSn(); }"
       />
     </div>
     <el-drawer

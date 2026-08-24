@@ -181,6 +181,10 @@
                 label="FANUC_TCP"
                 value="FANUC_TCP"
               ></el-option>
+              <el-option
+                label="MITSUBISHI_TCP"
+                value="MITSUBISHI_TCP"
+              ></el-option>
               <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
@@ -439,13 +443,14 @@
                 </el-form-item>
               </template>
 
-              <!-- Modbus TCP / Fins / Brother / FANUC 配置 -->
+              <!-- Modbus TCP / Fins / Brother / FANUC / 三菱MC 配置 -->
               <template
                 v-else-if="
                   form.netType === 'MODBUS_TCP' ||
                   form.netType === 'OMRONFINS_TCP' ||
                   form.netType === 'BROTHER_TCP' ||
-                  form.netType === 'FANUC_TCP'
+                  form.netType === 'FANUC_TCP' ||
+                  form.netType === 'MITSUBISHI_TCP'
                 "
               >
                 <el-form-item label="服务器IP" prop="dynamicConfig.ipAddr">
@@ -457,7 +462,7 @@
                 <el-form-item label="服务器端口" prop="dynamicConfig.port">
                   <el-input
                     v-model="form.dynamicConfig.port"
-                    placeholder="FANUC 固定 8193，如：8193"
+                    placeholder="如：三菱 MC 默认 5007 / FANUC 8193"
                   />
                 </el-form-item>
                 <el-form-item label="连接超时(ms)" prop="dynamicConfig.timeout">
@@ -903,6 +908,28 @@ export default {
               },
             ],
           };
+        case "MITSUBISHI_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
         case "S71200_TCP":
           return {
             ...baseRules,
@@ -1122,6 +1149,11 @@ export default {
         this.form.dynamicConfig = {
           timeout: 3000,
           port: 8193,
+        };
+      } else if (netType === "MITSUBISHI_TCP") {
+        this.form.dynamicConfig = {
+          timeout: 3000,
+          port: 5007,
         };
       } else if (netType === "S71200_TCP") {
         this.form.dynamicConfig = {

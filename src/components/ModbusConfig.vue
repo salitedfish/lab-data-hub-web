@@ -72,6 +72,8 @@
               size="mini"
               icon="el-icon-edit"
               type="primary"
+              :loading="editLoading == scope.row.id"
+              :disabled="editLoading == scope.row.id"
               @click="editModbusConfig(scope.row)"
               class="table-action"
               >编辑
@@ -80,6 +82,8 @@
               size="mini"
               icon="el-icon-delete"
               type="danger"
+              :loading="deleteLoading == scope.row.id"
+              :disabled="deleteLoading == scope.row.id"
               @click="deleteModbus(scope.row.id)"
               class="table-action"
               >删除
@@ -93,7 +97,8 @@
         :page-size="modbusParams.pageSize"
         :total="modbusParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="getModbusConfigByDeviceSn"
+        @current-change="(pageNum) => { modbusParams.pageNum = pageNum; getModbusConfigByDeviceSn(); }"
+        @size-change="(size) => { modbusParams.pageSize = size; modbusParams.pageNum = 1; getModbusConfigByDeviceSn(); }"
       />
     </div>
     <el-drawer
@@ -151,7 +156,13 @@
             margin-top: 20px;
           "
         >
-          <el-button type="primary" @click="submitModbusForm">确 定</el-button>
+          <el-button
+            type="primary"
+            :loading="submitLoading"
+            :disabled="submitLoading"
+            @click="submitModbusForm"
+            >确 定</el-button
+          >
           <!-- 可选：加间距，按钮更美观 -->
           <el-button @click="closeModbus" style="margin-left: 12px"
             >取 消</el-button
@@ -193,6 +204,10 @@ export default {
     return {
       timeEnabled: this.enabled,
       openAddModbus: false,
+      submitLoading: false,
+      // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
+      editLoading: null,
+      deleteLoading: null,
       modbusParams: {
         pageNum: 1,
         pageSize: 10,
@@ -210,25 +225,31 @@ export default {
     this.getModbusConfigByDeviceSn();
   },
   methods: {
-    getModbusConfigByDeviceSn() {
+    async getModbusConfigByDeviceSn() {
       this.modbusParams.belongSn = this.deviceSn;
-      listModbus(this.modbusParams).then((res) => {
+      try {
+        const res = await listModbus(this.modbusParams);
         if (res?.code == 200) {
           this.modbusList = res?.rows;
           this.modbusParams.total = res?.total;
         }
-      });
+      } catch (e) {
+        console.error("查询Modbus配置失败", e);
+      }
     },
     // Modbus功能开关切换事件
-    handleModbusStatusChange(enabled) {
-      readSwitchByDevice({
-        deviceSn: this.deviceSn,
-        isOpen: enabled == true ? "1" : "0",
-      }).then((res) => {
+    async handleModbusStatusChange(enabled) {
+      try {
+        const res = await readSwitchByDevice({
+          deviceSn: this.deviceSn,
+          isOpen: enabled == true ? "1" : "0",
+        });
         if (res?.code == 200) {
           this.$message.success("操作成功");
         }
-      });
+      } catch (e) {
+        console.error("Modbus读取开关切换失败", e);
+      }
     },
     /** 提交按钮 */
     submitModbusForm() {
@@ -258,21 +279,27 @@ export default {
       }
       this.$refs["modbusForm"].validate((valid) => {
         if (valid) {
-          if (this.modbusForm.id != null) {
-            updateModbus(this.modbusForm).then((response) => {
-              this.$modal.msgSuccess("修改成功");
-              this.openAddModbus = false;
-              this.getModbusConfigByDeviceSn();
-            });
-          } else {
-            addModbus(this.modbusForm).then((response) => {
-              this.$modal.msgSuccess("新增成功");
-              this.openAddModbus = false;
-              this.getModbusConfigByDeviceSn();
-            });
-          }
+          this.saveModbusConfig();
         }
       });
+    },
+    async saveModbusConfig() {
+      this.submitLoading = true;
+      try {
+        if (this.modbusForm.id != null) {
+          await updateModbus(this.modbusForm);
+          this.$modal.msgSuccess("修改成功");
+        } else {
+          await addModbus(this.modbusForm);
+          this.$modal.msgSuccess("新增成功");
+        }
+        this.openAddModbus = false;
+        this.getModbusConfigByDeviceSn();
+      } catch (e) {
+        console.error("保存Modbus配置失败", e);
+      } finally {
+        this.submitLoading = false;
+      }
     },
     // 取消按钮
     closeModbus() {
@@ -308,26 +335,47 @@ export default {
       this.modbusForm.delayTime = 100;
       this.modbusForm.functionCode = "03";
     },
-    editModbusConfig(item) {
-      this.modbusIsEdit = true;
-      this.openAddModbus = true;
-      getModbus(item.id).then((response) => {
-        this.modbusForm = response.data;
-      });
+    async editModbusConfig(item) {
+      this.editLoading = item.id;
+      try {
+        const res = await getModbus(item.id);
+        if (res?.code == 200) {
+          this.modbusIsEdit = true;
+          this.openAddModbus = true;
+          this.modbusForm = res.data;
+        }
+      } catch (e) {
+        console.error("查询Modbus配置失败", e);
+      } finally {
+        this.editLoading = null;
+      }
     },
-    deleteModbus(id) {
-      this.$confirm("确定要删除此配置吗?", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      }).then(() => {
-        delModbus(id).then((res) => {
-          if (res?.code === 200) {
-            this.getModbusConfigByDeviceSn();
+    async deleteModbus(id) {
+      this.deleteLoading = id;
+      let confirmed = false;
+      try {
+        await this.$confirm("确定要删除此配置吗?", "提示", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        });
+        confirmed = true;
+      } catch (e) {
+        // 用户取消，不做处理
+        console.error("删除确认取消", e);
+      }
+      if (confirmed) {
+        try {
+          const res = await delModbus(id);
+          if (res?.code == 200) {
+            await this.getModbusConfigByDeviceSn();
             this.$message.success("删除成功");
           }
-        });
-      });
+        } catch (e) {
+          console.error("删除Modbus配置失败", e);
+        }
+      }
+      this.deleteLoading = null;
     },
   },
 };

@@ -1,15 +1,15 @@
 <template>
-  <div class="s71200-tcp-config">
+  <div class="modbus-config">
     <div class="tab-content">
       <div class="tab-header">
-        <div class="tab-title">S71200_TCP配置</div>
+        <div class="tab-title">MITSUBISHI_TCP配置</div>
         <div class="tab-actions" style="right: 20px" v-if="!isProductIn">
           <span style="font-weight: 800; align-items: center; gap: 4px">
             <!-- 感叹号图标 + 悬浮提示 -->
             <el-tooltip
               class="item"
               effect="dark"
-              :content="'修改定时配置或修改从站ID都需要关闭再开启才会生效'"
+              :content="'修改定时配置或修改软元件地址都需要关闭再开启才会生效'"
               placement="top"
             >
               <i
@@ -25,7 +25,7 @@
             inactive-text=""
             active-color="#13ce66"
             inactive-color="#ff4949"
-            @change="handleS71200TcpStatusChange"
+            @change="handleMitsubishiTcpStatusChange"
             class="status-switch"
           />
         </div>
@@ -34,7 +34,7 @@
             type="primary"
             icon="el-icon-plus"
             class="action-btn"
-            @click="addS71200TcpConfig"
+            @click="addMitsubishiTcpConfig"
             >添加配置</el-button
           >
         </div>
@@ -42,13 +42,13 @@
       <div class="filter-bar">
         <el-form :inline="true" class="filter-form">
           <el-form-item label="标识">
-            <el-input v-model="s71200TcpParams.code"></el-input>
+            <el-input v-model="mitsubishiTcpParams.code"></el-input>
           </el-form-item>
           <el-form-item>
             <el-button
               type="primary"
               icon="el-icon-search"
-              @click="getS71200TcpConfigByDeviceSn"
+              @click="getMitsubishiTcpConfigByDeviceSn()"
               class="search-btn"
               >查询
             </el-button>
@@ -56,18 +56,19 @@
         </el-form>
       </div>
       <el-table
-        :data="s71200TcpList"
+        :data="mitsubishiTcpList"
         style="width: 100%"
         class="data-table"
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
-        <el-table-column prop="dbNumber" label="DB块号" width="180" />
-        <el-table-column prop="blockType" label="块类型" width="180" />
-        <el-table-column prop="areaType" label="区类型" width="100" />
+        <el-table-column prop="areaCode" label="软元件" width="150">
+          <template slot-scope="scope">
+            {{ areaCodeName(scope.row.areaCode) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="startAddress" label="起始地址" width="180" />
-        <el-table-column prop="bitOffset" label="位偏移" width="180" />
-        <el-table-column prop="length" label="长度" width="180" />
+        <el-table-column prop="length" label="读取数量" width="180" />
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="180" />
         <el-table-column prop="delayTime" label="读取后延迟(ms)" width="180" />
         <el-table-column label="操作" width="250" fixed="right">
@@ -78,7 +79,7 @@
               type="primary"
               :loading="editLoading == scope.row.id"
               :disabled="editLoading == scope.row.id"
-              @click="editS71200TcpConfig(scope.row)"
+              @click="editMitsubishiTcpConfig(scope.row)"
               class="table-action"
               >编辑
             </el-button>
@@ -88,7 +89,7 @@
               type="danger"
               :loading="deleteLoading == scope.row.id"
               :disabled="deleteLoading == scope.row.id"
-              @click="deleteS71200Tcp(scope.row.id)"
+              @click="deleteMitsubishiTcp(scope.row.id)"
               class="table-action"
               >删除
             </el-button>
@@ -97,101 +98,92 @@
       </el-table>
       <el-pagination
         class="pagination"
-        :current-page="s71200TcpParams.pageNum"
-        :page-size="s71200TcpParams.pageSize"
-        :total="s71200TcpParams.total"
+        :current-page="mitsubishiTcpParams.pageNum"
+        :page-size="mitsubishiTcpParams.pageSize"
+        :total="mitsubishiTcpParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="(pageNum) => { s71200TcpParams.pageNum = pageNum; getS71200TcpConfigByDeviceSn(); }"
-        @size-change="(size) => { s71200TcpParams.pageSize = size; s71200TcpParams.pageNum = 1; getS71200TcpConfigByDeviceSn(); }"
+        @current-change="(pageNum) => { mitsubishiTcpParams.pageNum = pageNum; getMitsubishiTcpConfigByDeviceSn(); }"
+        @size-change="(size) => { mitsubishiTcpParams.pageSize = size; mitsubishiTcpParams.pageNum = 1; getMitsubishiTcpConfigByDeviceSn(); }"
       />
     </div>
-    <!-- S71200_TCP -->
     <el-drawer
       :title="'新增配置'"
-      :visible.sync="openAddS71200Tcp"
+      :visible.sync="openAddMitsubishiTcp"
       direction="rtl"
       size="40%"
-      :before-close="closeS71200Tcp"
+      :before-close="closeMitsubishiTcp"
       class="component-drawer"
     >
       <div class="drawer-content">
         <!-- 添加或修改设备对话框 -->
-        <el-form ref="s71200TcpForm" :model="s71200TcpForm" label-width="140px">
+        <el-form
+          ref="mitsubishiTcpForm"
+          :model="mitsubishiTcpForm"
+          label-width="140px"
+        >
           <el-form-item label="标识" prop="code" required>
-            <el-input v-model="s71200TcpForm.code" placeholder="请输入标识" />
-          </el-form-item>
-          <el-form-item label="DB块号" prop="dbNumber" required>
             <el-input
-              v-model="s71200TcpForm.dbNumber"
-              placeholder="DB块号"
-              type="number"
+              v-model="mitsubishiTcpForm.code"
+              placeholder="请输入标识"
             />
           </el-form-item>
-          <el-form-item label="块类型" prop="blockType" required>
+          <el-form-item label="软元件" prop="areaCode" required>
             <el-select
-              v-model="s71200TcpForm.blockType"
-              placeholder="DBW，DBX，DBD，DBB"
+              v-model="mitsubishiTcpForm.areaCode"
+              placeholder="请选择软元件类型"
             >
-              <el-option label="DBW" value="DBW" />
-              <el-option label="DBX" value="DBX" />
-              <el-option label="DBD" value="DBD" />
-              <el-option label="DBB" value="DBB" />
+              <el-option label="D 数据寄存器" :value="0xA8" />
+              <el-option label="W 链接寄存器" :value="0xB4" />
+              <el-option label="R 文件寄存器" :value="0xAF" />
+              <el-option label="ZR 文件寄存器" :value="0xB0" />
+              <el-option label="SD 特殊寄存器" :value="0xA9" />
+              <el-option label="M 内部继电器" :value="0x90" />
+              <el-option label="L 锁存继电器" :value="0x92" />
+              <el-option label="B 链接继电器" :value="0xA0" />
+              <el-option label="X 输入继电器" :value="0x9C" />
+              <el-option label="Y 输出继电器" :value="0x9D" />
+              <el-option label="S 步进继电器" :value="0x98" />
+              <el-option label="SM 特殊继电器" :value="0x91" />
+              <el-option label="F 报警器" :value="0x93" />
             </el-select>
           </el-form-item>
-          <el-form-item label="区类型" prop="areaType" required>
-            <el-select
-              v-model="s71200TcpForm.areaType"
-              placeholder="DB数据块"
+          <el-form-item label="起始地址" prop="startAddress" required>
+            <el-input
+              v-model="mitsubishiTcpForm.startAddress"
+              type="number"
+              placeholder="请输入起始地址"
+            />
+            <div
+              v-if="isOctalArea"
+              style="
+                color: #e6a23c;
+                font-size: 12px;
+                line-height: 18px;
+                margin-top: 4px;
+              "
             >
-              <el-option label="DB数据块" value="DB" />
-              <el-option label="M标志位" value="M" />
-              <el-option label="I输入区" value="I" />
-              <el-option label="Q输出区" value="Q" />
-            </el-select>
+              提示：X/Y 软元件地址为八进制，请输入八进制地址（如 17 表示第 15 位）
+            </div>
           </el-form-item>
-          <el-form-item label="起始地址" prop="startAddress">
+          <el-form-item label="读取数量" prop="length" required>
             <el-input
-              v-model="s71200TcpForm.startAddress"
-              placeholder=""
+              v-model="mitsubishiTcpForm.length"
               type="number"
-            />
-          </el-form-item>
-          <el-form-item
-            label="位偏移"
-            prop="bitOffset"
-            :required="s71200TcpForm.blockType == 'DBX'"
-          >
-            <el-input
-              v-model="s71200TcpForm.bitOffset"
-              :min="0"
-              :max="7"
-              placeholder="0-7"
-              type="number"
-            />
-          </el-form-item>
-          <el-form-item
-            label="读取长度"
-            prop="length"
-            :required="s71200TcpForm.blockType == 'DBB'"
-          >
-            <el-input
-              v-model="s71200TcpForm.length"
-              placeholder="字节"
-              type="number"
+              placeholder="字设备≤960，位设备≤2000"
             />
           </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
             <el-input
               type="number"
-              v-model="s71200TcpForm.intervalTime"
+              v-model="mitsubishiTcpForm.intervalTime"
               placeholder="多久执行一次读取指令，如：10"
             />
           </el-form-item>
           <el-form-item label="读取后延迟(毫秒)" prop="delayTime" required>
             <el-input
               type="number"
-              v-model="s71200TcpForm.delayTime"
-              placeholder="同一个串口服务器每次读取间隔，如：1000"
+              v-model="mitsubishiTcpForm.delayTime"
+              placeholder="同一个网络组件每次读取间隔，如：1000"
             />
           </el-form-item>
         </el-form>
@@ -208,11 +200,11 @@
             type="primary"
             :loading="submitLoading"
             :disabled="submitLoading"
-            @click="submitS71200TcpForm"
+            @click="submitMitsubishiTcpForm"
             >确 定</el-button
           >
           <!-- 可选：加间距，按钮更美观 -->
-          <el-button @click="closeS71200Tcp" style="margin-left: 12px"
+          <el-button @click="closeMitsubishiTcp" style="margin-left: 12px"
             >取 消</el-button
           >
         </div>
@@ -223,16 +215,16 @@
 
 <script>
 import {
-  listS71200Tcp,
-  delS71200Tcp,
-  updateS71200Tcp,
-  addS71200Tcp,
-  getS71200Tcp,
-} from "@/api/business/s71200";
-import { readS71200TcpSwitchByDevice } from "@/api/business/s71200";
+  listMitsubishiTcp,
+  delMitsubishiTcp,
+  updateMitsubishiTcp,
+  addMitsubishiTcp,
+  getMitsubishiTcp,
+} from "@/api/business/mitsubishiTcp";
+import { readMitsubishiTcpSwitchByDevice } from "@/api/business/mitsubishiTcp";
 
 export default {
-  name: "S71200TcpConfig",
+  name: "MitsubishiTcpConfig",
   props: {
     deviceSn: {
       type: String,
@@ -251,44 +243,52 @@ export default {
   data() {
     return {
       timeEnabled: this.enabled,
-      openAddS71200Tcp: false,
+      openAddMitsubishiTcp: false,
       submitLoading: false,
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
-      s71200TcpParams: {
+      mitsubishiTcpParams: {
         pageNum: 1,
         pageSize: 10,
         total: 0,
         belongSn: null,
         belongType: null,
       },
-      s71200TcpIsEdit: false,
-      s71200TcpForm: {},
-      s71200TcpList: [],
+      mitsubishiTcpIsEdit: false,
+      mitsubishiTcpForm: {},
+      mitsubishiTcpList: [],
     };
   },
+  computed: {
+    // X/Y 软元件地址为八进制，提示用户
+    isOctalArea() {
+      return (
+        this.mitsubishiTcpForm.areaCode == 0x9c || this.mitsubishiTcpForm.areaCode == 0x9d
+      );
+    },
+  },
   created() {
-    this.s71200TcpParams.belongSn = this.deviceSn;
-    this.getS71200TcpConfigByDeviceSn();
+    this.mitsubishiTcpParams.belongSn = this.deviceSn;
+    this.getMitsubishiTcpConfigByDeviceSn();
   },
   methods: {
-    async getS71200TcpConfigByDeviceSn() {
-      this.s71200TcpParams.belongSn = this.deviceSn;
+    async getMitsubishiTcpConfigByDeviceSn() {
+      this.mitsubishiTcpParams.belongSn = this.deviceSn;
       try {
-        const res = await listS71200Tcp(this.s71200TcpParams);
+        const res = await listMitsubishiTcp(this.mitsubishiTcpParams);
         if (res?.code == 200) {
-          this.s71200TcpList = res?.rows;
-          this.s71200TcpParams.total = res?.total;
+          this.mitsubishiTcpList = res?.rows;
+          this.mitsubishiTcpParams.total = res?.total;
         }
       } catch (e) {
-        console.error("查询S7配置失败", e);
+        console.error("查询三菱配置失败", e);
       }
     },
-    // S71200_TCP功能开关切换事件
-    async handleS71200TcpStatusChange(enabled) {
+    // MitsubishiTcp功能开关切换事件
+    async handleMitsubishiTcpStatusChange(enabled) {
       try {
-        const res = await readS71200TcpSwitchByDevice({
+        const res = await readMitsubishiTcpSwitchByDevice({
           deviceSn: this.deviceSn,
           isOpen: enabled == true ? "1" : "0",
         });
@@ -296,88 +296,105 @@ export default {
           this.$message.success("操作成功");
         }
       } catch (e) {
-        console.error("S7读取开关切换失败", e);
+        console.error("三菱读取开关切换失败", e);
       }
     },
-    submitS71200TcpForm() {
-      this.$refs["s71200TcpForm"].validate((valid) => {
+    /** 提交按钮 */
+    submitMitsubishiTcpForm() {
+      this.$refs["mitsubishiTcpForm"].validate((valid) => {
         if (valid) {
-          this.saveS71200TcpConfig();
+          this.saveMitsubishiTcpConfig();
         }
       });
     },
-    async saveS71200TcpConfig() {
+    async saveMitsubishiTcpConfig() {
       this.submitLoading = true;
       try {
-        if (this.s71200TcpForm.id != null) {
-          await updateS71200Tcp(this.s71200TcpForm);
+        if (this.mitsubishiTcpForm.id != null) {
+          await updateMitsubishiTcp(this.mitsubishiTcpForm);
           this.$modal.msgSuccess("修改成功");
         } else {
-          await addS71200Tcp(this.s71200TcpForm);
+          await addMitsubishiTcp(this.mitsubishiTcpForm);
           this.$modal.msgSuccess("新增成功");
         }
-        this.openAddS71200Tcp = false;
-        this.getS71200TcpConfigByDeviceSn();
+        this.openAddMitsubishiTcp = false;
+        this.getMitsubishiTcpConfigByDeviceSn();
       } catch (e) {
-        console.error("保存S7配置失败", e);
+        console.error("保存三菱配置失败", e);
       } finally {
         this.submitLoading = false;
       }
     },
-    // 取消按钮
-    closeS71200Tcp() {
-      this.openAddS71200Tcp = false;
-      this.resetAddS71200TcpConfig();
+    // 软元件代码转名称展示
+    areaCodeName(code) {
+      const areaMap = {
+        168: "D 数据寄存器",
+        180: "W 链接寄存器",
+        175: "R 文件寄存器",
+        176: "ZR 文件寄存器",
+        169: "SD 特殊寄存器",
+        144: "M 内部继电器",
+        146: "L 锁存继电器",
+        160: "B 链接继电器",
+        156: "X 输入继电器",
+        157: "Y 输出继电器",
+        152: "S 步进继电器",
+        145: "SM 特殊继电器",
+        147: "F 报警器",
+      };
+      return areaMap[code] != null ? areaMap[code] : code;
     },
-    resetAddS71200TcpConfig() {
-      this.s71200TcpForm = {
+    // 取消按钮
+    closeMitsubishiTcp() {
+      this.openAddMitsubishiTcp = false;
+      this.resetAddMitsubishiTcpConfig();
+    },
+    resetAddMitsubishiTcpConfig() {
+      this.mitsubishiTcpForm = {
         id: null,
         belongSn: null,
         belongType: null,
         code: null,
         createTime: null,
-        dbNumber: null,
-        blockType: null,
-        areaType: null,
+        areaCode: null,
         startAddress: null,
-        bitOffset: null,
         length: null,
         intervalTime: null,
         delayTime: null,
       };
-      this.resetForm("s71200TcpForm");
+      this.resetForm("mitsubishiTcpForm");
     },
     resetForm(formName) {
       if (this.$refs[formName]) {
         this.$refs[formName].resetFields();
       }
     },
-    addS71200TcpConfig() {
-      this.s71200TcpIsEdit = false;
-      this.openAddS71200Tcp = true;
-      this.resetAddS71200TcpConfig();
-      this.s71200TcpForm.belongSn = this.deviceSn;
-      this.s71200TcpForm.belongType = "0";
-      this.s71200TcpForm.intervalTime = 10;
-      this.s71200TcpForm.delayTime = 100;
-      this.s71200TcpForm.areaType = "DB";
+    addMitsubishiTcpConfig() {
+      this.mitsubishiTcpIsEdit = false;
+      this.openAddMitsubishiTcp = true;
+      this.resetAddMitsubishiTcpConfig();
+      this.mitsubishiTcpForm.belongSn = this.deviceSn;
+      this.mitsubishiTcpForm.belongType = "0";
+      this.mitsubishiTcpForm.intervalTime = 10;
+      this.mitsubishiTcpForm.delayTime = 100;
+      this.mitsubishiTcpForm.areaCode = 0xa8;
     },
-    async editS71200TcpConfig(item) {
+    async editMitsubishiTcpConfig(item) {
       this.editLoading = item.id;
       try {
-        const res = await getS71200Tcp(item.id);
+        const res = await getMitsubishiTcp(item.id);
         if (res?.code == 200) {
-          this.s71200TcpIsEdit = true;
-          this.openAddS71200Tcp = true;
-          this.s71200TcpForm = res.data;
+          this.mitsubishiTcpIsEdit = true;
+          this.openAddMitsubishiTcp = true;
+          this.mitsubishiTcpForm = res.data;
         }
       } catch (e) {
-        console.error("查询S7配置失败", e);
+        console.error("查询三菱配置失败", e);
       } finally {
         this.editLoading = null;
       }
     },
-    async deleteS71200Tcp(id) {
+    async deleteMitsubishiTcp(id) {
       this.deleteLoading = id;
       let confirmed = false;
       try {
@@ -393,13 +410,13 @@ export default {
       }
       if (confirmed) {
         try {
-          const res = await delS71200Tcp(id);
+          const res = await delMitsubishiTcp(id);
           if (res?.code == 200) {
-            await this.getS71200TcpConfigByDeviceSn();
+            await this.getMitsubishiTcpConfigByDeviceSn();
             this.$message.success("删除成功");
           }
         } catch (e) {
-          console.error("删除S7配置失败", e);
+          console.error("删除三菱配置失败", e);
         }
       }
       this.deleteLoading = null;
@@ -409,7 +426,7 @@ export default {
 </script>
 
 <style scoped>
-.s71200-tcp-config {
+.modbus-config {
   width: 100%;
 }
 

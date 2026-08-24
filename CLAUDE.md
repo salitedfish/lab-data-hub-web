@@ -49,15 +49,16 @@ npm run build:stage  # 预发构建（--mode staging）
 - `components/BrotherTcpConfig.vue` 配置抽屉据此提供**两级语义点位选择**：先选「点位类型」（按 数据区.行号 分组，`pointType` 值为 `数据区|行号`，如 `PDSP|4` P01 机械坐标 / `WKCNTR|1` A01 工件计数1），再选「点位」下拉（按分组过滤，选项右侧灰显符号地址）。选点自动填 标识(code=点位 key)/数据区/行号/字段序号 并展示符号地址/协议地址/建议数据类型；`pointType`/`pointKey` 为表单 model 字段（均有 `prop`，避免必填项校验报 undefined）。ALARM 及自定义地址走「手动指定地址」模式。选点填入的 `code` 需在「物模型」tab 建同名属性（identifier）数据才能按 dataType 正确解析。
 - **设备详情页**（`src/views/business/device/detail.vue`）：「实时数据」tab 实时值由 `/ws/device/{sn}` WebSocket 推送更新（WS 地址跟随页面地址），初始值由 `getDeviceLastData` 拉取；「历史数据」弹窗表格含 **属性名/属性值** 两列（解析日志 `properties` JSON 中 `DecodeMessage.properties` 对象，标识符映射物模型显示名），查询的「属性名称」过滤项传 `propertyName`（物模型 identifier）给后端 `/business/deviceLogs/list` 过滤。定时读取开关状态来自后端 `device.modbusRead`（切换时由后端 `readSwitchByDevice` 持久化）。
 
-## PLC 协议配置组件（Modbus / S7-1200 / OMRONFINS）
+## PLC 协议配置组件（Modbus / S7-1200 / OMRONFINS / 三菱 MC）
 
-PLC 寄存器协议不能预置点位表（见下「设计原则」），三个配置抽屉都是**手动地址录入**。本次「读」能力补全后：
+PLC 寄存器协议不能预置点位表（见下「设计原则」），四个配置抽屉都是**手动地址录入**。本次「读」能力补全后：
 
 - `components/ModbusConfig.vue`：新增「功能码」下拉（**01线圈 / 02离散输入 / 03保持寄存器 / 04输入寄存器**，默认 03），列表列 + 编辑回显带；提交时 JS 校验功能码 ∈ 上述四值。「读取后延迟」`prop="delayTime"`（原错标为 `intervalTime`，配置的延迟实际不生效）。`registerRange` 只允许单个区间（`0` 或 `0-3`），后端会把一个 code 的多区间合并为 `[minStart, maxEnd]` 单块读取，保证该 code 只出一个属性值。
 - `components/S71200TcpConfig.vue`：新增「区类型」下拉（**DB数据块 / M标志位 / I输入区 / Q输出区**，默认 DB），列表列 + 编辑回显带；映射后端 `area_type` 列 → `DaveArea`（DB/FLAGS/INPUTS/OUTPUTS）。「读取后延迟」`prop="delayTime"` 修复。
 - `components/OmronFinsTcpConfig.vue`：存储区 `areaCode` 从裸十六进制数字输入改为「存储区」下拉（**DM区 0x82 / CIO区 0x30 / WR区 0xB1 / H区 0x31 / IR区 0x80 / LR区 0x98 / EM区 0xA0**，默认 DM区），列表列显示区名（`areaCodeName` 数字→区名映射）；标题修复为 `OMRONFINS_TCP配置`；开关 `prop="enabled"`（原拼错 `evalnabled`，开关恒关）；「读取后延迟」`prop="delayTime"` 修复。
+- `components/MitsubishiTcpConfig.vue`：新增三菱 MC 配置组件。软元件 `areaCode` 用「软元件类型」下拉（**字设备 D/W/R/ZR/SD；位设备 M/L/B/X/Y/S/SM/F**，值=十六进制代码，默认 D），列表列显示软元件名（`areaCodeName` 数字→名称映射）；选 X/Y 软元件时起始地址下方提示「X/Y 地址为八进制」；标题 `MITSUBISHI_TCP配置`；路由前缀 `/business/mitsubishiTcp`（`src/api/business/mitsubishiTcp.js`）；组件/协议页下拉均含 `MITSUBISHI_TCP`，组件动态配置默认端口 5007；设备/产品详情页出现 `Mitsubishi_TCP配置` tab（`v-if="component?.netType == 'MITSUBISHI_TCP'"`）。三菱 MC 是 PLC 寄存器协议，**不能预置点位表**，手动地址录入。
 
-三个组件定时读取开关状态来自后端 `device.modbusRead`（切换时 `readSwitchByDevice` 持久化），消费端均消费 `delayTime`（读取后延迟毫秒）。
+三个组件定时读取开关状态来自后端 `device.modbusRead`（切换时 `readSwitchByDevice` 持久化），消费端均消费 `delayTime`（读取后延迟毫秒）。**编码收敛（六个配置组件 Modbus/S7/Fins/Mitsubishi/Brother/Fanuc 一致）**：异步一律 `async/await` + `try/catch/finally`（禁止 `.then()`）；等值判断用 `==`；表格行操作按钮（编辑/删除）用 `editLoading == row.id` / `deleteLoading == row.id` 独立 loading + `disabled`（避免点一行整列一起转圈）；抽屉提交按钮带 `submitLoading`；分页 `@current-change`/`@size-change` 写回 `pageNum`/`pageSize`（size 变化重置 pageNum=1），修复翻页/改每页条数不生效问题。
 
 ## FANUC FOCAS2 协议点位表
 

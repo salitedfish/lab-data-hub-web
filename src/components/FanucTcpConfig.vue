@@ -102,7 +102,8 @@
         :page-size="fanucTcpParams.pageSize"
         :total="fanucTcpParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="getFanucTcpConfigByDeviceSn"
+        @current-change="(pageNum) => { fanucTcpParams.pageNum = pageNum; getFanucTcpConfigByDeviceSn(); }"
+        @size-change="(size) => { fanucTcpParams.pageSize = size; fanucTcpParams.pageNum = 1; getFanucTcpConfigByDeviceSn(); }"
       />
     </div>
     <el-drawer

@@ -77,6 +77,8 @@
               size="mini"
               icon="el-icon-edit"
               type="primary"
+              :loading="editLoading == scope.row.id"
+              :disabled="editLoading == scope.row.id"
               @click="editOmronFinsTcpConfig(scope.row)"
               class="table-action"
               >编辑
@@ -85,6 +87,8 @@
               size="mini"
               icon="el-icon-delete"
               type="danger"
+              :loading="deleteLoading == scope.row.id"
+              :disabled="deleteLoading == scope.row.id"
               @click="deleteOmronFinsTcp(scope.row.id)"
               class="table-action"
               >删除
@@ -98,7 +102,8 @@
         :page-size="omronFinsTcpParams.pageSize"
         :total="omronFinsTcpParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="getOmronFinsTcpConfigByDeviceSn"
+        @current-change="(pageNum) => { omronFinsTcpParams.pageNum = pageNum; getOmronFinsTcpConfigByDeviceSn(); }"
+        @size-change="(size) => { omronFinsTcpParams.pageSize = size; omronFinsTcpParams.pageNum = 1; getOmronFinsTcpConfigByDeviceSn(); }"
       />
     </div>
     <el-drawer
@@ -174,7 +179,11 @@
             margin-top: 20px;
           "
         >
-          <el-button type="primary" @click="submitOmronFinsTcpForm"
+          <el-button
+            type="primary"
+            :loading="submitLoading"
+            :disabled="submitLoading"
+            @click="submitOmronFinsTcpForm"
             >确 定</el-button
           >
           <!-- 可选：加间距，按钮更美观 -->
@@ -218,6 +227,10 @@ export default {
     return {
       timeEnabled: this.enabled,
       openAddOmronFinsTcp: false,
+      submitLoading: false,
+      // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
+      editLoading: null,
+      deleteLoading: null,
       omronFinsTcpParams: {
         pageNum: 1,
         pageSize: 10,
@@ -235,45 +248,57 @@ export default {
     this.getOmronFinsTcpConfigByDeviceSn();
   },
   methods: {
-    getOmronFinsTcpConfigByDeviceSn() {
+    async getOmronFinsTcpConfigByDeviceSn() {
       this.omronFinsTcpParams.belongSn = this.deviceSn;
-      listOmronFinsTcp(this.omronFinsTcpParams).then((res) => {
+      try {
+        const res = await listOmronFinsTcp(this.omronFinsTcpParams);
         if (res?.code == 200) {
           this.omronFinsTcpList = res?.rows;
           this.omronFinsTcpParams.total = res?.total;
         }
-      });
+      } catch (e) {
+        console.error("查询FINS配置失败", e);
+      }
     },
     // OmronFinsTcp功能开关切换事件
-    handleOmronFinsTcpStatusChange(enabled) {
-      readOmronFinsTcpSwitchByDevice({
-        deviceSn: this.deviceSn,
-        isOpen: enabled == true ? "1" : "0",
-      }).then((res) => {
+    async handleOmronFinsTcpStatusChange(enabled) {
+      try {
+        const res = await readOmronFinsTcpSwitchByDevice({
+          deviceSn: this.deviceSn,
+          isOpen: enabled == true ? "1" : "0",
+        });
         if (res?.code == 200) {
           this.$message.success("操作成功");
         }
-      });
+      } catch (e) {
+        console.error("FINS读取开关切换失败", e);
+      }
     },
     /** 提交按钮 */
     submitOmronFinsTcpForm() {
       this.$refs["omronFinsTcpForm"].validate((valid) => {
         if (valid) {
-          if (this.omronFinsTcpForm.id != null) {
-            updateOmronFinsTcp(this.omronFinsTcpForm).then((response) => {
-              this.$modal.msgSuccess("修改成功");
-              this.openAddOmronFinsTcp = false;
-              this.getOmronFinsTcpConfigByDeviceSn();
-            });
-          } else {
-            addOmronFinsTcp(this.omronFinsTcpForm).then((response) => {
-              this.$modal.msgSuccess("新增成功");
-              this.openAddOmronFinsTcp = false;
-              this.getOmronFinsTcpConfigByDeviceSn();
-            });
-          }
+          this.saveOmronFinsTcpConfig();
         }
       });
+    },
+    async saveOmronFinsTcpConfig() {
+      this.submitLoading = true;
+      try {
+        if (this.omronFinsTcpForm.id != null) {
+          await updateOmronFinsTcp(this.omronFinsTcpForm);
+          this.$modal.msgSuccess("修改成功");
+        } else {
+          await addOmronFinsTcp(this.omronFinsTcpForm);
+          this.$modal.msgSuccess("新增成功");
+        }
+        this.openAddOmronFinsTcp = false;
+        this.getOmronFinsTcpConfigByDeviceSn();
+      } catch (e) {
+        console.error("保存FINS配置失败", e);
+      } finally {
+        this.submitLoading = false;
+      }
     },
     // 存储区代码转名称展示
     areaCodeName(code) {
@@ -323,26 +348,47 @@ export default {
       this.omronFinsTcpForm.delayTime = 100;
       this.omronFinsTcpForm.areaCode = 0x82;
     },
-    editOmronFinsTcpConfig(item) {
-      this.omronFinsTcpIsEdit = true;
-      this.openAddOmronFinsTcp = true;
-      getOmronFinsTcp(item.id).then((response) => {
-        this.omronFinsTcpForm = response.data;
-      });
+    async editOmronFinsTcpConfig(item) {
+      this.editLoading = item.id;
+      try {
+        const res = await getOmronFinsTcp(item.id);
+        if (res?.code == 200) {
+          this.omronFinsTcpIsEdit = true;
+          this.openAddOmronFinsTcp = true;
+          this.omronFinsTcpForm = res.data;
+        }
+      } catch (e) {
+        console.error("查询FINS配置失败", e);
+      } finally {
+        this.editLoading = null;
+      }
     },
-    deleteOmronFinsTcp(id) {
-      this.$confirm("确定要删除此配置吗?", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      }).then(() => {
-        delOmronFinsTcp(id).then((res) => {
-          if (res?.code === 200) {
-            this.getOmronFinsTcpConfigByDeviceSn();
+    async deleteOmronFinsTcp(id) {
+      this.deleteLoading = id;
+      let confirmed = false;
+      try {
+        await this.$confirm("确定要删除此配置吗?", "提示", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning",
+        });
+        confirmed = true;
+      } catch (e) {
+        // 用户取消，不做处理
+        console.error("删除确认取消", e);
+      }
+      if (confirmed) {
+        try {
+          const res = await delOmronFinsTcp(id);
+          if (res?.code == 200) {
+            await this.getOmronFinsTcpConfigByDeviceSn();
             this.$message.success("删除成功");
           }
-        });
-      });
+        } catch (e) {
+          console.error("删除FINS配置失败", e);
+        }
+      }
+      this.deleteLoading = null;
     },
   },
 };

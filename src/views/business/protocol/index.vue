@@ -183,6 +183,10 @@
                 label="FANUC_TCP"
                 value="FANUC_TCP"
               ></el-option>
+              <el-option
+                label="MITSUBISHI_TCP"
+                value="MITSUBISHI_TCP"
+              ></el-option>
               <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
