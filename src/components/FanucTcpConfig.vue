@@ -62,9 +62,9 @@
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
-        <el-table-column label="采集项" width="120">
+        <el-table-column label="点位" width="180">
           <template slot-scope="scope">
-            {{ readTypeLabel(scope.row.readType) }}
+            {{ fanucPointName(scope.row) }}
           </template>
         </el-table-column>
         <el-table-column prop="param1" label="参数1" width="100" />
@@ -385,9 +385,13 @@ export default {
     this.getFanucTcpConfigByDeviceSn();
   },
   methods: {
-    // 采集项英文值 → 中文展示名（列表列用）
-    readTypeLabel(readType) {
-      return FANUC_TCP_ROW_LABELS[readType] || readType;
+    // 点位名称（命中点位表显示语义名，未命中显示协议地址 readType.param1.param2）
+    fanucPointName(row) {
+      if (!row) {
+        return "";
+      }
+      const p = findFanucTcpPoint(row.readType, row.param1, row.param2);
+      return p ? p.name : toAddress(row);
     },
     async getFanucTcpConfigByDeviceSn() {
       try {

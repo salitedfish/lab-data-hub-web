@@ -82,9 +82,9 @@ const MODE = [
   { key: "operation_mode", name: "操作模式", readType: "mode", param1: null, param2: null, dataType: "int", symbol: "OPMODE", desc: "0=MDI 1=AUTO 2=EDIT 3=HANDLE 4=JOG 5=INC 6=RMT 7=REF 8=TAPE" },
 ];
 
-// ===== 运行状态 status（param1=1运行 2停止 3急停 4自动方式） =====
+// ===== 运行状态 status（param1=1运行状态 2停止 3急停 4自动方式） =====
 const STATUS = [
-  { key: "status_run", name: "运行中", readType: "status", param1: 1, param2: null, dataType: "int", symbol: "RUN", desc: "机床运行中（0/1）" },
+  { key: "status_run", name: "运行状态", readType: "status", param1: 1, param2: null, dataType: "int", symbol: "RUN", desc: "运行状态（0=待机/停止 1=运行/加工中）" },
   { key: "status_stop", name: "停止", readType: "status", param1: 2, param2: null, dataType: "int", symbol: "STOP", desc: "机床停止（0/1）" },
   { key: "status_emergency", name: "急停", readType: "status", param1: 3, param2: null, dataType: "int", symbol: "EMG", desc: "急停状态（0=未急停 1=急停）" },
   { key: "status_automatic", name: "自动方式", readType: "status", param1: 4, param2: null, dataType: "int", symbol: "AUTO", desc: "自动方式（0/1）" },

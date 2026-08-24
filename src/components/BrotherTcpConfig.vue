@@ -62,9 +62,11 @@
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
-        <el-table-column prop="dataArea" label="数据区" width="120" />
-        <el-table-column prop="rowNumber" label="行号" width="100" />
-        <el-table-column prop="fieldIndex" label="字段序号" width="110" />
+        <el-table-column label="点位" width="180">
+          <template slot-scope="scope">
+            {{ brotherPointName(scope.row) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="130" />
         <el-table-column prop="delayTime" label="读取后延迟(ms)" width="140" />
         <el-table-column label="操作" width="200" fixed="right">
@@ -381,6 +383,14 @@ export default {
       } catch (e) {
         console.error("查询Brother配置失败", e);
       }
+    },
+    // 点位名称（命中点表显示语义名，未命中显示协议地址 数据区.行号.字段序号）
+    brotherPointName(row) {
+      if (!row) {
+        return "";
+      }
+      const p = findBrotherTcpPoint(row.dataArea, row.rowNumber, row.fieldIndex);
+      return p ? p.name : (row.dataArea + "." + row.rowNumber + "." + row.fieldIndex);
     },
     // Brother定时读取开关切换事件
     async handleBrotherTcpStatusChange(enabled) {
