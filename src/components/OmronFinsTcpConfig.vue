@@ -135,8 +135,8 @@
               <el-option label="DM区" :value="0x82" />
               <el-option label="CIO区" :value="0x30" />
               <el-option label="WR区" :value="0xB1" />
-              <el-option label="H区" :value="0x31" />
-              <el-option label="IR区" :value="0x80" />
+              <el-option label="H区" :value="0x32" />
+              <el-option label="IR区" :value="0x88" />
               <el-option label="LR区" :value="0x98" />
               <el-option label="EM区" :value="0xA0" />
             </el-select>
@@ -306,8 +306,8 @@ export default {
         130: "DM区",
         48: "CIO区",
         177: "WR区",
-        49: "H区",
-        128: "IR区",
+        50: "H区",
+        136: "IR区",
         152: "LR区",
         160: "EM区",
       };

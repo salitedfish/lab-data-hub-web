@@ -98,7 +98,7 @@ const PRGNUM = [
 
 // ===== 报警 alarm（param1=1报警号 2报警文本） =====
 const ALARM = [
-  { key: "alarm_no", name: "报警号", readType: "alarm", param1: 1, param2: null, dataType: "int", symbol: "ALM-NO", desc: "当前报警号（多条时取最后一条）" },
+  { key: "alarm_no", name: "报警数量", readType: "alarm", param1: 1, param2: null, dataType: "int", symbol: "ALM-NO", desc: "当前报警数量（FOCAS2 cnc_rdalmmsg 的 alm_no 字段返回报警条数，不是报警号；当前无报警为0）" },
   { key: "alarm_msg", name: "报警文本", readType: "alarm", param1: 2, param2: null, dataType: "string", symbol: "ALM-MSG", desc: "当前报警文本（多条时取最后一条）" },
 ];
 
