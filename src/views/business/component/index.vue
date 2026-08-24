@@ -177,6 +177,10 @@
                 label="BROTHER_TCP"
                 value="BROTHER_TCP"
               ></el-option>
+              <el-option
+                label="FANUC_TCP"
+                value="FANUC_TCP"
+              ></el-option>
               <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
@@ -435,12 +439,13 @@
                 </el-form-item>
               </template>
 
-              <!-- Modbus TCP / Fins / Brother 配置 -->
+              <!-- Modbus TCP / Fins / Brother / FANUC 配置 -->
               <template
                 v-else-if="
                   form.netType === 'MODBUS_TCP' ||
                   form.netType === 'OMRONFINS_TCP' ||
-                  form.netType === 'BROTHER_TCP'
+                  form.netType === 'BROTHER_TCP' ||
+                  form.netType === 'FANUC_TCP'
                 "
               >
                 <el-form-item label="服务器IP" prop="dynamicConfig.ipAddr">
@@ -452,7 +457,7 @@
                 <el-form-item label="服务器端口" prop="dynamicConfig.port">
                   <el-input
                     v-model="form.dynamicConfig.port"
-                    placeholder="如：8080"
+                    placeholder="FANUC 固定 8193，如：8193"
                   />
                 </el-form-item>
                 <el-form-item label="连接超时(ms)" prop="dynamicConfig.timeout">
@@ -460,6 +465,17 @@
                     type="number"
                     v-model="form.dynamicConfig.timeout"
                     placeholder="如：3000"
+                  />
+                </el-form-item>
+                <!-- FANUC 专用：fwlib32 库路径（可选，默认自动搜索 java.library.path / lib 目录等） -->
+                <el-form-item
+                  label="fwlib32库路径"
+                  prop="dynamicConfig.libPath"
+                  v-if="form.netType === 'FANUC_TCP'"
+                >
+                  <el-input
+                    v-model="form.dynamicConfig.libPath"
+                    placeholder="可空；如 /opt/fanuc/libfwlib32.so（不填则自动搜索常见目录）"
                   />
                 </el-form-item>
               </template>
@@ -865,6 +881,28 @@ export default {
               },
             ],
           };
+        case "FANUC_TCP":
+          return {
+            ...baseRules,
+            "dynamicConfig.ipAddr": [
+              { required: true, message: "服务器IP不能为空", trigger: "blur" },
+            ],
+            "dynamicConfig.port": [
+              {
+                required: true,
+                message: "服务器端口不能为空",
+                trigger: "blur",
+                validator: this.validatePort,
+              },
+            ],
+            "dynamicConfig.timeout": [
+              {
+                required: true,
+                message: "连接超时不能为空",
+                trigger: "blur",
+              },
+            ],
+          };
         case "S71200_TCP":
           return {
             ...baseRules,
@@ -1079,6 +1117,11 @@ export default {
       ) {
         this.form.dynamicConfig = {
           timeout: 3000,
+        };
+      } else if (netType === "FANUC_TCP") {
+        this.form.dynamicConfig = {
+          timeout: 3000,
+          port: 8193,
         };
       } else if (netType === "S71200_TCP") {
         this.form.dynamicConfig = {

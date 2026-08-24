@@ -49,6 +49,12 @@ npm run build:stage  # 预发构建（--mode staging）
 - `components/BrotherTcpConfig.vue` 配置抽屉据此提供**两级语义点位选择**：先选「点位类型」（按 数据区.行号 分组，`pointType` 值为 `数据区|行号`，如 `PDSP|4` P01 机械坐标 / `WKCNTR|1` A01 工件计数1），再选「点位」下拉（按分组过滤，选项右侧灰显符号地址）。选点自动填 标识(code=点位 key)/数据区/行号/字段序号 并展示符号地址/协议地址/建议数据类型；`pointType`/`pointKey` 为表单 model 字段（均有 `prop`，避免必填项校验报 undefined）。ALARM 及自定义地址走「手动指定地址」模式。选点填入的 `code` 需在「物模型」tab 建同名属性（identifier）数据才能按 dataType 正确解析。
 - **设备详情页**（`src/views/business/device/detail.vue`）：「实时数据」tab 实时值由 `/ws/device/{sn}` WebSocket 推送更新（WS 地址跟随页面地址），初始值由 `getDeviceLastData` 拉取；「历史数据」弹窗表格含 **属性名/属性值** 两列（解析日志 `properties` JSON 中 `DecodeMessage.properties` 对象，标识符映射物模型显示名），查询的「属性名称」过滤项传 `propertyName`（物模型 identifier）给后端 `/business/deviceLogs/list` 过滤。定时读取开关状态来自后端 `device.modbusRead`（切换时由后端 `readSwitchByDevice` 持久化）。
 
+## FANUC FOCAS2 协议点位表
+
+- `src/utils/fanucTcpPoints.js` 内置 FANUC FOCAS2（台丽 CNC / FANUC 0i-MF Plus）点位表，覆盖 **axis 坐标 / spindle 主轴 / feed 进给 / mode 操作模式 / status 运行状态 / prgnum 程序 / alarm 报警 / tcode 刀具 / timer 时间 / macro 宏变量(#500-#999) / pmc PMC信号** 共 547 个语义点位。地址模型与后端 `FanucFocasDataReader` 一致：**协议地址 = 采集项类型.参数1.参数2**（如 `axis.1.1` = X 轴机械坐标，未用参数省略，如 `mode`）。数据来源为 FANUC FOCAS2 官方 fwlib32 读取函数族；**JNA 结构体字段偏移第一次真机/NCGuide 验证后需核对修正**；PMC 完整点位待真机验证后补充（点位表先给常见 F1/F0/G8）。
+- `components/FanucTcpConfig.vue` 配置抽屉据此提供**两级语义点位选择**：先选「点位类型」（按采集项 readType 分组，如 axis 坐标 / spindle 主轴 / macro 宏变量），再选「点位」下拉（选项右侧灰显符号地址）。选点自动填 标识(code=点位 key)/采集项(readType)/参数1/参数2 并展示符号地址/协议地址/建议数据类型；`pointType`/`pointKey` 为表单 model 字段。手动模式输入 readType（采集项下拉）/参数1/参数2（axis/pmc 才需参数2）。选点填入的 `code` 需在「物模型」tab 建同名属性（identifier）数据才能按 dataType 正确解析。协议路由前缀 `/business/fanucTcp`（`src/api/business/fanucFocas.js`）。
+- **组件/协议页面**：`src/views/business/component/index.vue` 与 `src/views/business/protocol/index.vue` 的协议类型下拉均含 `FANUC_TCP`；组件动态配置模板含 服务器IP/端口(默认8193)/连接超时/fwlib32库路径(可选，不填自动搜索常见目录)。设备/产品详情页出现 `Fanuc_TCP配置` tab（`v-if="component?.netType == 'FANUC_TCP'"`）。
+
 ## 编码规范（重要）
 
 1. **异步操作一律用 `async/await` + `try/catch/finally`**，catch 打印错误，finally 重置状态。**禁止 Promise 链式调用**（`.then()` / `.catch()`）。

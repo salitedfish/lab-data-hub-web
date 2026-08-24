@@ -312,6 +312,16 @@
           />
         </el-tab-pane>
         <el-tab-pane
+          label="Fanuc_TCP配置"
+          name="fanucTcpConfig"
+          v-if="component?.netType == 'FANUC_TCP'"
+        >
+          <FanucTcpConfig
+            :device-sn="device.deviceSn"
+            :enabled="modbusEnabled"
+          />
+        </el-tab-pane>
+        <el-tab-pane
           label="Database_TCP配置"
           name="databaseTcpConfig"
           v-if="component?.netType == 'DATABASE_TCP'"
@@ -1295,6 +1305,7 @@ import S71200TcpConfig from "@/components/S71200TcpConfig";
 import OmronFinsTcpConfig from "@/components/OmronFinsTcpConfig";
 import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
 import BrotherTcpConfig from "@/components/BrotherTcpConfig";
+import FanucTcpConfig from "@/components/FanucTcpConfig";
 
 export default {
   name: "DeviceDetail",
@@ -1304,6 +1315,7 @@ export default {
     OmronFinsTcpConfig,
     DatabaseTcpConfig,
     BrotherTcpConfig,
+    FanucTcpConfig,
   },
   created() {
     this.deviceId = this.$route.query.id;

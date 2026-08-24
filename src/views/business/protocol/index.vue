@@ -179,6 +179,10 @@
                 label="BROTHER_TCP"
                 value="BROTHER_TCP"
               ></el-option>
+              <el-option
+                label="FANUC_TCP"
+                value="FANUC_TCP"
+              ></el-option>
               <el-option label="DATABASE_TCP" value="DATABASE_TCP"></el-option>
             </el-select>
           </el-form-item>
