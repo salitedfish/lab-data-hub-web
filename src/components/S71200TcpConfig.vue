@@ -64,6 +64,7 @@
         <el-table-column prop="code" label="标识" width="150" />
         <el-table-column prop="dbNumber" label="DB块号" width="180" />
         <el-table-column prop="blockType" label="块类型" width="180" />
+        <el-table-column prop="areaType" label="区类型" width="100" />
         <el-table-column prop="startAddress" label="起始地址" width="180" />
         <el-table-column prop="bitOffset" label="位偏移" width="180" />
         <el-table-column prop="length" label="长度" width="180" />
@@ -132,6 +133,17 @@
               <el-option label="DBB" value="DBB" />
             </el-select>
           </el-form-item>
+          <el-form-item label="区类型" prop="areaType" required>
+            <el-select
+              v-model="s71200TcpForm.areaType"
+              placeholder="DB数据块"
+            >
+              <el-option label="DB数据块" value="DB" />
+              <el-option label="M标志位" value="M" />
+              <el-option label="I输入区" value="I" />
+              <el-option label="Q输出区" value="Q" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="起始地址" prop="startAddress">
             <el-input
               v-model="s71200TcpForm.startAddress"
@@ -170,7 +182,7 @@
               placeholder="多久执行一次读取指令，如：10"
             />
           </el-form-item>
-          <el-form-item label="读取后延迟(毫秒)" prop="intervalTime" required>
+          <el-form-item label="读取后延迟(毫秒)" prop="delayTime" required>
             <el-input
               type="number"
               v-model="s71200TcpForm.delayTime"
@@ -301,6 +313,7 @@ export default {
         createTime: null,
         dbNumber: null,
         blockType: null,
+        areaType: null,
         startAddress: null,
         bitOffset: null,
         length: null,
@@ -322,6 +335,7 @@ export default {
       this.s71200TcpForm.belongType = "0";
       this.s71200TcpForm.intervalTime = 10;
       this.s71200TcpForm.delayTime = 100;
+      this.s71200TcpForm.areaType = "DB";
     },
     editS71200TcpConfig(item) {
       this.s71200TcpIsEdit = true;

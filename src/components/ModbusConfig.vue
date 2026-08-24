@@ -63,6 +63,7 @@
       >
         <el-table-column prop="code" label="标识" width="150" />
         <el-table-column prop="registerRange" label="寄存器范围" width="180" />
+        <el-table-column prop="functionCode" label="功能码" width="100" />
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="180" />
         <el-table-column prop="delayTime" label="读取后延迟(ms)" width="180" />
         <el-table-column label="操作" width="250" fixed="right">
@@ -115,6 +116,17 @@
               placeholder="单个区间，如：0 或 0-3（一个字一个 16 位，浮点/32 位整数占 2 个字）"
             />
           </el-form-item>
+          <el-form-item label="功能码" prop="functionCode" required>
+            <el-select
+              v-model="modbusForm.functionCode"
+              placeholder="03保持寄存器"
+            >
+              <el-option label="01线圈" value="01" />
+              <el-option label="02离散输入" value="02" />
+              <el-option label="03保持寄存器" value="03" />
+              <el-option label="04输入寄存器" value="04" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
             <el-input
               type="number"
@@ -122,7 +134,7 @@
               placeholder="多久执行一次读取指令，如：10"
             />
           </el-form-item>
-          <el-form-item label="读取后延迟(毫秒)" prop="intervalTime" required>
+          <el-form-item label="读取后延迟(毫秒)" prop="delayTime" required>
             <el-input
               type="number"
               v-model="modbusForm.delayTime"
@@ -238,6 +250,12 @@ export default {
         );
         return;
       }
+      // 校验功能码：01线圈/02离散输入/03保持寄存器/04输入寄存器
+      const functionCode = this.modbusForm.functionCode;
+      if (!["01", "02", "03", "04"].includes(functionCode)) {
+        this.$message.error("请选择功能码（01线圈/02离散输入/03保持寄存器/04输入寄存器）");
+        return;
+      }
       this.$refs["modbusForm"].validate((valid) => {
         if (valid) {
           if (this.modbusForm.id != null) {
@@ -269,6 +287,7 @@ export default {
         code: null,
         createTime: null,
         registerRange: null,
+        functionCode: null,
         intervalTime: null,
         delayTime: null,
       };
@@ -287,6 +306,7 @@ export default {
       this.modbusForm.belongType = "0";
       this.modbusForm.intervalTime = 10;
       this.modbusForm.delayTime = 100;
+      this.modbusForm.functionCode = "03";
     },
     editModbusConfig(item) {
       this.modbusIsEdit = true;

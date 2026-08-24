@@ -2,7 +2,7 @@
   <div class="modbus-config">
     <div class="tab-content">
       <div class="tab-header">
-        <div class="tab-title">Database_TCP配置</div>
+        <div class="tab-title">OMRONFINS_TCP配置</div>
         <div class="tab-actions" style="right: 20px" v-if="!isProductIn">
           <span style="font-weight: 800; align-items: center; gap: 4px">
             <!-- 感叹号图标 + 悬浮提示 -->
@@ -62,7 +62,11 @@
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
-        <el-table-column prop="areaCode" label="存储区代码" width="180" />
+        <el-table-column prop="areaCode" label="存储区" width="120">
+          <template slot-scope="scope">
+            {{ areaCodeName(scope.row.areaCode) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="startAddress" label="起始地址" width="180" />
         <el-table-column prop="length" label="读取数量" width="180" />
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="180" />
@@ -118,12 +122,19 @@
               placeholder="请输入标识"
             />
           </el-form-item>
-          <el-form-item label="存储区代码" prop="areaCode" required>
-            <el-input
+          <el-form-item label="存储区" prop="areaCode" required>
+            <el-select
               v-model="omronFinsTcpForm.areaCode"
-              type="number"
-              placeholder="请输入存储区代码"
-            />
+              placeholder="DM区"
+            >
+              <el-option label="DM区" :value="0x82" />
+              <el-option label="CIO区" :value="0x30" />
+              <el-option label="WR区" :value="0xB1" />
+              <el-option label="H区" :value="0x31" />
+              <el-option label="IR区" :value="0x80" />
+              <el-option label="LR区" :value="0x98" />
+              <el-option label="EM区" :value="0xA0" />
+            </el-select>
           </el-form-item>
           <el-form-item label="起始地址" prop="startAddress" required>
             <el-input
@@ -146,7 +157,7 @@
               placeholder="多久执行一次读取指令，如：10"
             />
           </el-form-item>
-          <el-form-item label="读取后延迟(毫秒)" prop="intervalTime" required>
+          <el-form-item label="读取后延迟(毫秒)" prop="delayTime" required>
             <el-input
               type="number"
               v-model="omronFinsTcpForm.delayTime"
@@ -193,7 +204,7 @@ export default {
       type: String,
       required: true,
     },
-    evalnabled: {
+    enabled: {
       type: Boolean,
       default: true,
     },
@@ -264,6 +275,19 @@ export default {
         }
       });
     },
+    // 存储区代码转名称展示
+    areaCodeName(code) {
+      const areaMap = {
+        130: "DM区",
+        48: "CIO区",
+        177: "WR区",
+        49: "H区",
+        128: "IR区",
+        152: "LR区",
+        160: "EM区",
+      };
+      return areaMap[code] != null ? areaMap[code] : code;
+    },
     // 取消按钮
     closeOmronFinsTcp() {
       this.openAddOmronFinsTcp = false;
@@ -297,6 +321,7 @@ export default {
       this.omronFinsTcpForm.belongType = "0";
       this.omronFinsTcpForm.intervalTime = 10;
       this.omronFinsTcpForm.delayTime = 100;
+      this.omronFinsTcpForm.areaCode = 0x82;
     },
     editOmronFinsTcpConfig(item) {
       this.omronFinsTcpIsEdit = true;
