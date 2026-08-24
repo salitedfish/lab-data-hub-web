@@ -1227,7 +1227,10 @@ export default {
       this.mapDialogVisible = true;
     },
     getDeviceListByProductSn(page) {
-      this.deviceParams.pageNum = page;
+      // 无参调用（sizeChange/新增/删除等场景）不覆盖 pageNum，避免把页码清成 undefined
+      if (page != null) {
+        this.deviceParams.pageNum = page;
+      }
       this.deviceParams.productSn = this.product.productSn;
       listDevice(this.deviceParams).then((res) => {
         if (res?.code == 200) {
