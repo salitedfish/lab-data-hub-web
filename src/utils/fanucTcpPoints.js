@@ -10,15 +10,21 @@
  *   - param1/param2 随类型含义不同，见下表各点位 desc；未用到的参数不填（地址中省略）
  *
  * 数据来源：
- *   - FANUC FOCAS2 官方函数库 fwlib32 的读取函数族（cnc_rdaxisdata / cnc_rdspindle /
- *     cnc_rdact / cnc_rdopmode / cnc_statinfo / cnc_rdprgnum / cnc_rdalmmsg /
- *     cnc_rdtcode / cnc_rdmacro / cnc_rdtimer / pmc_rdpmc）。
- *   - 坐标轴序 1-6 = X/Y/Z/A/B/C；坐标类型 1=机械 2=绝对 3=相对 4=剩余。
- *   - 主轴/进给/刀具的参数 1 起，映射 fwlib 内部 type 0 起。
- *   - 时间参数 1=运行 2=切削 3=循环 4=上电（单位分钟）。
- *   - 宏变量 1-999（常用 500+ 用户宏变量，数值可含小数，值=mcr_val/10^dec_val）。
- *   - PMC 信号：param1=1(F)/2(G)，param2=字节地址号；具体 F/G 地址以机床 PMC 梯形图为准，
- *     点位表先给常见几个，**完整 PMC 点位待真机验证后补充**。
+ *   - FANUC FOCAS2 官方函数库 fwlib32 读取函数族（cnc_rdaxisdata / cnc_acts /
+ *     cnc_rdspload / cnc_actf / cnc_statinfo / cnc_rdprgnum / cnc_rdalmmsg /
+ *     cnc_rdmacro / cnc_rdtimer / pmc_rdpmcrng）。
+ *     注：FOCAS2 无 cnc_rdspindle / cnc_rdact / cnc_rdtcode / cnc_rdopmode / pmc_rdpmc，
+ *     主轴转速/进给/刀具/操作模式分别由 cnc_acts / cnc_actf / 宏变量(#3901/#3902) / cnc_statinfo 读取。
+ *   - 坐标轴序 1-6 = X/Y/Z/A/B/C；坐标类型 param2：1=机械 2=绝对 3=相对 4=剩余，
+ *     后端映射 fwlib type（1=机械 0=绝对 2=相对 3=剩余），值 = data/10^dec。
+ *   - 操作模式/运行状态来自 cnc_statinfo 的 ODBST.aut/run（0i-D/F 语义见 mode/status 点位 desc）。
+ *   - 主轴倍率 FOCAS2 无直接读取函数，需按机床 PMC 梯形图用 pmc 分组读 G 区倍率地址（点位表不预置）。
+ *   - 顺序号 FOCAS2 无直接读取函数，sequence_no 点位保留但不可读（后端返回 null）。
+ *   - 刀具号经系统宏变量读取：#3901 当前刀具、#3902 程序指定下一把刀具（FOCAS2 无直接读刀具函数）。
+ *   - 时间参数 1=运行 2=切削 3=循环 4=上电（cnc_rdtimer type 1/2/3/0，单位分钟）。
+ *   - 宏变量 1-9999（常用 500+ 用户宏变量，数值可含小数，值=mcr_val/10^dec_val）。
+ *   - PMC 信号：param1=1(F)/2(G)/3(X)/4(Y)，param2=字节地址号；读整字节，位需自行按位解析；
+ *     具体 F/G/X/Y 地址以机床 PMC 梯形图为准，点位表先给常见几个，**完整 PMC 点位待真机验证后补充**。
  *   - JNA 结构体字段偏移为 FOCAS2 对接最关键环节，第一次真机/NCGuide 验证后需核对修正。
  *
  * 每个点位字段：
@@ -59,61 +65,61 @@ COORD_TYPES.forEach((ct) => {
       param2: ct[2],
       dataType: "float",
       symbol: ct[1] + " " + ax[1],
-      desc: "轴" + ax[2] + "（" + ax[1] + "）" + ct[1] + "，单位 mm（含小数）",
+      desc: "轴" + ax[2] + "（" + ax[1] + "）" + ct[1] + "（cnc_rdaxisdata type=" + ct[2] + "），单位 mm（含小数）",
     });
   });
 });
 
 // ===== 主轴 spindle（param1=1转速 2倍率 3负载 4报警） =====
 const SPINDLE = [
-  { key: "spindle_speed", name: "主轴转速", readType: "spindle", param1: 1, param2: null, dataType: "float", symbol: "S", desc: "主轴实际转速，单位 rpm" },
-  { key: "spindle_override", name: "主轴倍率", readType: "spindle", param1: 2, param2: null, dataType: "int", symbol: "S%", desc: "主轴倍率，百分比，如 100" },
-  { key: "spindle_load", name: "主轴负载", readType: "spindle", param1: 3, param2: null, dataType: "int", symbol: "S-Load", desc: "主轴电机负载，百分比" },
-  { key: "spindle_alarm", name: "主轴报警", readType: "spindle", param1: 4, param2: null, dataType: "int", symbol: "S-Alm", desc: "主轴报警状态（0=无报警）" },
+  { key: "spindle_speed", name: "主轴转速", readType: "spindle", param1: 1, param2: null, dataType: "float", symbol: "S", desc: "主轴实际转速（cnc_acts），单位 rpm" },
+  { key: "spindle_override", name: "主轴倍率", readType: "spindle", param1: 2, param2: null, dataType: "int", symbol: "S%", desc: "主轴倍率百分比（FOCAS2 无直接读取函数，需按机床梯形图用 pmc 分组读 G 区倍率地址）" },
+  { key: "spindle_load", name: "主轴负载", readType: "spindle", param1: 3, param2: null, dataType: "int", symbol: "S-Load", desc: "主轴电机负载（cnc_rdspload，负载在 data[0]），百分比" },
+  { key: "spindle_alarm", name: "主轴报警", readType: "spindle", param1: 4, param2: null, dataType: "int", symbol: "S-Alm", desc: "主轴报警状态（cnc_rdalmmsg type=9；0=无报警 1=有报警）" },
 ];
 
-// ===== 进给 feed（param1=1 实际进给；进给倍率 cnc_rdact 不提供，需走 PMC 待真机验证） =====
+// ===== 进给 feed（param1=1 实际进给；进给倍率 FOCAS2 无直接函数，需走 PMC） =====
 const FEED = [
-  { key: "feedrate_actual", name: "实际进给速度", readType: "feed", param1: 1, param2: null, dataType: "float", symbol: "F", desc: "实际进给速度（每分钟进给），单位 mm/min；进给倍率需 PMC 读取" },
+  { key: "feedrate_actual", name: "实际进给速度", readType: "feed", param1: 1, param2: null, dataType: "float", symbol: "F", desc: "实际进给速度（cnc_actf），单位随 G94/G95：mm/min 或 mm/rev；进给倍率需 PMC 读取" },
 ];
 
-// ===== 操作模式 mode =====
+// ===== 操作模式 mode（cnc_statinfo → ODBST.aut，0i-D/F） =====
 const MODE = [
-  { key: "operation_mode", name: "操作模式", readType: "mode", param1: null, param2: null, dataType: "int", symbol: "OPMODE", desc: "0=MDI 1=AUTO 2=EDIT 3=HANDLE 4=JOG 5=INC 6=RMT 7=REF 8=TAPE" },
+  { key: "operation_mode", name: "操作模式", readType: "mode", param1: null, param2: null, dataType: "int", symbol: "OPMODE", desc: "操作模式（0i-D/F ODBST.aut）：0=MDI 1=MEM(自动) 2=*** 3=EDIT 4=HANDLE 5=JOG 6=Teach JOG 7=Teach HANDLE 8=INC 9=REF 10=RMT 11=TEST" },
 ];
 
-// ===== 运行状态 status（param1=1运行状态 2停止 3急停 4自动方式） =====
+// ===== 运行状态 status（cnc_statinfo → ODBST.run/emergency/aut） =====
 const STATUS = [
-  { key: "status_run", name: "运行状态", readType: "status", param1: 1, param2: null, dataType: "int", symbol: "RUN", desc: "运行状态（0=待机/停止 1=运行/加工中）" },
-  { key: "status_stop", name: "停止", readType: "status", param1: 2, param2: null, dataType: "int", symbol: "STOP", desc: "机床停止（0/1）" },
-  { key: "status_emergency", name: "急停", readType: "status", param1: 3, param2: null, dataType: "int", symbol: "EMG", desc: "急停状态（0=未急停 1=急停）" },
-  { key: "status_automatic", name: "自动方式", readType: "status", param1: 4, param2: null, dataType: "int", symbol: "AUTO", desc: "自动方式（0/1）" },
+  { key: "status_run", name: "运行状态", readType: "status", param1: 1, param2: null, dataType: "int", symbol: "RUN", desc: "运行状态（run==START(3) 为 1 加工中，否则 0 待机/停止）" },
+  { key: "status_stop", name: "停止", readType: "status", param1: 2, param2: null, dataType: "int", symbol: "STOP", desc: "机床停止（run==STOP(1) 为 1，否则 0）" },
+  { key: "status_emergency", name: "急停", readType: "status", param1: 3, param2: null, dataType: "int", symbol: "EMG", desc: "急停状态（0=未急停 1=急停/复位中）" },
+  { key: "status_automatic", name: "自动方式", readType: "status", param1: 4, param2: null, dataType: "int", symbol: "AUTO", desc: "自动方式（aut==MEM(1) 为 1，否则 0）" },
 ];
 
 // ===== 程序 prgnum（param1=1程序号 2顺序号） =====
 const PRGNUM = [
-  { key: "program_no", name: "当前程序号", readType: "prgnum", param1: 1, param2: null, dataType: "int", symbol: "O", desc: "当前运行程序号" },
-  { key: "sequence_no", name: "当前顺序号", readType: "prgnum", param1: 2, param2: null, dataType: "int", symbol: "N", desc: "当前程序段顺序号" },
+  { key: "program_no", name: "当前程序号", readType: "prgnum", param1: 1, param2: null, dataType: "int", symbol: "O", desc: "当前运行程序号（cnc_rdprgnum）" },
+  { key: "sequence_no", name: "当前顺序号", readType: "prgnum", param1: 2, param2: null, dataType: "int", symbol: "N", desc: "当前程序段顺序号（FOCAS2 无直接读取函数，暂不可读）" },
 ];
 
-// ===== 报警 alarm（param1=1报警号 2报警文本） =====
+// ===== 报警 alarm（param1=1报警数量 2报警文本） =====
 const ALARM = [
-  { key: "alarm_no", name: "报警数量", readType: "alarm", param1: 1, param2: null, dataType: "int", symbol: "ALM-NO", desc: "当前报警数量（FOCAS2 cnc_rdalmmsg 的 alm_no 字段返回报警条数，不是报警号；当前无报警为0）" },
-  { key: "alarm_msg", name: "报警文本", readType: "alarm", param1: 2, param2: null, dataType: "string", symbol: "ALM-MSG", desc: "当前报警文本（多条时取最后一条）" },
+  { key: "alarm_no", name: "报警数量", readType: "alarm", param1: 1, param2: null, dataType: "int", symbol: "ALM-NO", desc: "当前报警数量（cnc_rdalmmsg type=-1 的 num 输出条数；当前无报警为0）" },
+  { key: "alarm_msg", name: "报警文本", readType: "alarm", param1: 2, param2: null, dataType: "string", symbol: "ALM-MSG", desc: "当前报警文本（多条时取最后一条，GBK 解码）" },
 ];
 
-// ===== 刀具 tcode（param1=1当前刀具 2上一把刀具） =====
+// ===== 刀具 tcode（param1=1当前刀具 2程序指定下一把刀具） =====
 const TCODE = [
-  { key: "tool_no_current", name: "当前刀具号", readType: "tcode", param1: 1, param2: null, dataType: "int", symbol: "T", desc: "当前使用刀具号" },
-  { key: "tool_no_last", name: "上一把刀具号", readType: "tcode", param1: 2, param2: null, dataType: "int", symbol: "T-Last", desc: "上一把使用刀具号" },
+  { key: "tool_no_current", name: "当前刀具号", readType: "tcode", param1: 1, param2: null, dataType: "int", symbol: "T", desc: "当前使用刀具号（FOCAS2 无 cnc_rdtcode，读系统宏变量 #3901）" },
+  { key: "tool_no_last", name: "下一把刀具号", readType: "tcode", param1: 2, param2: null, dataType: "int", symbol: "T-Next", desc: "程序指定下一把刀具号（读系统宏变量 #3902；FOCAS2 无直接读上一把刀具的函数，保留此点位表示 #3902 值）" },
 ];
 
 // ===== 时间 timer（param1=1运行 2切削 3循环 4上电，单位分钟） =====
 const TIMER = [
-  { key: "time_run", name: "运行时间", readType: "timer", param1: 1, param2: null, dataType: "int", symbol: "TIME-RUN", desc: "累计运行时间，单位分钟" },
-  { key: "time_cut", name: "切削时间", readType: "timer", param1: 2, param2: null, dataType: "int", symbol: "TIME-CUT", desc: "累计切削时间，单位分钟" },
-  { key: "time_cycle", name: "循环时间", readType: "timer", param1: 3, param2: null, dataType: "int", symbol: "TIME-CYC", desc: "累计循环时间，单位分钟" },
-  { key: "time_poweron", name: "上电时间", readType: "timer", param1: 4, param2: null, dataType: "int", symbol: "TIME-ON", desc: "累计通电时间，单位分钟" },
+  { key: "time_run", name: "运行时间", readType: "timer", param1: 1, param2: null, dataType: "int", symbol: "TIME-RUN", desc: "累计运行时间（cnc_rdtimer type=1），单位分钟" },
+  { key: "time_cut", name: "切削时间", readType: "timer", param1: 2, param2: null, dataType: "int", symbol: "TIME-CUT", desc: "累计切削时间（cnc_rdtimer type=2），单位分钟" },
+  { key: "time_cycle", name: "循环时间", readType: "timer", param1: 3, param2: null, dataType: "int", symbol: "TIME-CYC", desc: "累计循环时间（cnc_rdtimer type=3），单位分钟" },
+  { key: "time_poweron", name: "上电时间", readType: "timer", param1: 4, param2: null, dataType: "int", symbol: "TIME-ON", desc: "累计通电时间（cnc_rdtimer type=0），单位分钟" },
 ];
 
 // ===== 宏变量 macro（param1=宏变量号 1-999，常用 500+） =====
@@ -127,11 +133,11 @@ for (let n = 500; n <= 999; n++) {
     param2: null,
     dataType: "float",
     symbol: "#" + n,
-    desc: "宏变量 #" + n + "（可含小数；未使用的宏变量读取可能返回错误，建议先确认机床已使用该变量）",
+    desc: "宏变量 #" + n + "（可含小数，值=mcr_val/10^dec_val；未使用的宏变量读取可能返回错误，建议先确认机床已使用该变量）",
   });
 }
 
-// ===== PMC 信号 pmc（param1=1(F) 2(G)，param2=字节地址号；整字节返回，位需自行按位解析） =====
+// ===== PMC 信号 pmc（param1=1(F) 2(G) 3(X) 4(Y)，param2=字节地址号；整字节返回，位需自行按位解析） =====
 const PMC = [
   { key: "pmc_f1_auto", name: "F1 自动运行信号", readType: "pmc", param1: 1, param2: 1, dataType: "int", symbol: "F1", desc: "F 区地址 1 整字节（位0=自动运行）；地址以机床 PMC 梯形图为准，待真机验证" },
   { key: "pmc_f0_estop", name: "F0 急停信号", readType: "pmc", param1: 1, param2: 0, dataType: "int", symbol: "F0", desc: "F 区地址 0 整字节（急停相关）；地址以机床 PMC 梯形图为准，待真机验证" },
