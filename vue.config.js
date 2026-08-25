@@ -9,7 +9,8 @@ const CompressionPlugin = require("compression-webpack-plugin");
 
 const name = process.env.VUE_APP_TITLE || "LabDataHub"; // 网页标题
 
-const baseUrl = "http://127.0.0.1:8085"; // 后端接口
+// const baseUrl = "http://127.0.0.1:8085"; // 后端接口
+const baseUrl = "http://192.168.191.37:8085"; // 后端接口
 
 const port = process.env.port || process.env.npm_config_port || 8888; // 端口
 
