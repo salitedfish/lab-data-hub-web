@@ -1,5 +1,5 @@
 /**
- * Brother NC（BROTHER_TCP）协议点位表（PDSP / WKCNTR / PRD3 / MEM / PANEL 数据区）
+ * Brother NC（BROTHER_TCP）协议点位表（PDSP / WKCNTR / PRD3 / MEM / PANEL / MONT / PRDC2 / PRGN / ALARM 数据区）
  *
  * 作用：把"实际意义的点位"映射成协议地址（数据区.行号.字段序号），
  * 前端 Brother 配置抽屉据此做语义点位选择，选点后自动填充 标识/数据区/行号/字段序号。
@@ -13,11 +13,17 @@
  *   - PRD3：真机 LOD PRD3 实测结构（A01 生产汇总 / C01 最近加工记录）；B0001~ 逐件加工流水行号随加工新增而移动，不收录为固定点位。
  *   - MEM：真机 LOD MEM 实测（A01 运行状态汇总 6 字段：程序号/加工状态/内托盘/备件/模式/扩展运转；E01 报警代码历史，语义待确认未收录）。
  *   - PANEL：真机 LOD PANEL 实测（D01 门状态 / K01 面板开关 / S01 倍率+急停+门互锁+数据保护）。
- *   - VER：真机 LOD VER 实测（机型/版本/机身号），静态信息未收录进点位表；MONT/PRGN/PLCD/TOLSD/PRDC2 本机返回空帧。
+ *   - VER：真机 LOD VER 实测（机型/版本/机身号），静态信息未收录进点位表。
+ *   - MONT / PRDC2 / PRGN / ALARM：参照树根 RootCloud 解包（RootLink.DC.Protocol.BrotherTcp.dll）补齐（2026-08-26）。
+ *     树根读取方法 ReadPowerOnTime/ReadOperateTime→GetMontrParams(MONT)、ReadCuttingTime→GetPrdc2Info(PRDC2)、
+ *     ReadProgramLineNumber/ReadProgramContent→GetPrgn(PRGN)、ReadAlarm→GetAlarmState+GetMem(ALARM)，
+ *     字段位置从反汇编推断（行内字段序号：总运行≈2、上电≈3、切削≈3、程序内容≈1、程序行号≈2、报警≈1），
+ *     行号按标准单行假设取 1。⚠️ 本机 LOD MONT/PRGN/PLCD/TOLSD/PRDC2 返回空帧，这些点位在本机读不到数据，
+ *     地址（行号/字段序号）待支持机型真机 LOD 采样确认后修正；PLCD/TOLSD 无对应读取方法，仍不收录。
  * 地址约定（与后端 BrotherTcpDataReader 一致）：
  *   - 行号 = LOD 响应中数据行顺序（rows.get(0) 为 % 帧头，行号 1 起）
  *   - 字段序号 = 该行 Symbol 后第 1 个值（1 起），如 P01 行字段 1 = 机械坐标 X
- * ALARM 数据区暂无点位：机床无活动报警时 LOD ALARM 返回空帧，真实行结构需等机床报警时实测捕获后补充。
+ * ALARM 数据区：已按树根参照补入「当前报警」点位（机床无活动报警时 LOD ALARM 返回空帧，真实行结构待机床报警时实测捕获后修正）。
  *
  * 每个点位字段：
  *   key       建议的物模型属性标识（选点后自动填入 code，可编辑）
@@ -219,8 +225,39 @@ const PANEL = [
   { key: "panel_data_protect", name: "数据保护", dataArea: "PANEL", rowNumber: 3, fieldIndex: 7, dataType: "int", symbol: "S01.数据保护", desc: "0=关 1=开（真机 1）" },
 ];
 
+// ===== 计时数据 MONT =====
+// 树根 ReadPowerOnTime/ReadOperateTime → GetMontrParams(MONT)。字段位置从反汇编推断：
+// 总运行时间(TotalOperateTime)≈行内字段2、上电时间(PowerOnTime)≈字段3（树根解析行偏移 5/6，行号按标准单行假设 1）。
+// ⚠️ 本机 MONT 返回空帧，地址待支持机型真机 LOD 采样确认。
+const MONT = [
+  { key: "mont_operate_time", name: "总运行时间", dataArea: "MONT", rowNumber: 1, fieldIndex: 2, dataType: "string", symbol: "MONT.总运行时间", desc: "树根读总运行时间(TotalOperateTime)；本机 MONT 空帧，地址待真机 LOD 采样确认" },
+  { key: "mont_power_on_time", name: "上电时间", dataArea: "MONT", rowNumber: 1, fieldIndex: 3, dataType: "string", symbol: "MONT.上电时间", desc: "树根读上电时间(PowerOnTime)；本机 MONT 空帧，地址待真机 LOD 采样确认" },
+];
+
+// ===== 切削计时 PRDC2 =====
+// 树根 ReadCuttingTime → GetPrdc2Info(PRDC2)，切削时间(CuttingTime)≈行内字段3（循环时间 CycleTime≈字段2，同区）。
+// ⚠️ 本机 PRDC2 返回空帧，地址待支持机型真机 LOD 采样确认。
+const PRDC2 = [
+  { key: "prdc2_cutting_time", name: "切削时间", dataArea: "PRDC2", rowNumber: 1, fieldIndex: 3, dataType: "string", symbol: "PRDC2.切削时间", desc: "树根读切削时间(CuttingTime)；本机 PRDC2 空帧，地址待真机 LOD 采样确认" },
+];
+
+// ===== 程序 PRGN =====
+// 树根 ReadProgramLineNumber/ReadProgramContent → GetPrgn(PRGN)：程序内容(RowData)≈字段1、程序行号(RowNumber)≈字段2。
+// ⚠️ 本机 PRGN 返回空帧，地址待支持机型真机 LOD 采样确认。
+const PRGN = [
+  { key: "prgn_content", name: "程序内容", dataArea: "PRGN", rowNumber: 1, fieldIndex: 1, dataType: "string", symbol: "PRGN.程序内容", desc: "树根读程序内容(RowData)；本机 PRGN 空帧，地址待真机 LOD 采样确认" },
+  { key: "prgn_line_number", name: "程序行号", dataArea: "PRGN", rowNumber: 1, fieldIndex: 2, dataType: "int", symbol: "PRGN.程序行号", desc: "树根读程序行号(RowNumber)；本机 PRGN 空帧，地址待真机 LOD 采样确认" },
+];
+
+// ===== 报警 ALARM =====
+// 树根 ReadAlarm → GetAlarmState+GetMem(ALARM)，报警文本(AlmMsg)≈字段1。无活动报警时 LOD ALARM 返回空帧。
+// ⚠️ 行结构待机床报警时真机实测捕获后修正。
+const ALARM = [
+  { key: "alarm_text", name: "当前报警", dataArea: "ALARM", rowNumber: 1, fieldIndex: 1, dataType: "string", symbol: "ALARM.报警", desc: "树根读报警文本(AlmMsg)；无报警时空帧，行结构待有报警时真机实测确认" },
+];
+
 // 完整点位表（顺序即分组顺序）
-export const BROTHER_TCP_POINT_TABLE = [].concat(L01, G01, M01, P01, P02, P03, P04, X01, WKCNTR, PRD3, MEM, PANEL);
+export const BROTHER_TCP_POINT_TABLE = [].concat(L01, G01, M01, P01, P02, P03, P04, X01, WKCNTR, PRD3, MEM, PANEL, MONT, PRDC2, PRGN, ALARM);
 
 // 每行分组展示名（点位下拉分组标题），按数据区分组
 export const BROTHER_TCP_ROW_LABELS = {
@@ -255,6 +292,18 @@ export const BROTHER_TCP_ROW_LABELS = {
     1: "D01 门状态",
     2: "K01 面板开关",
     3: "S01 倍率/保护",
+  },
+  MONT: {
+    1: "MONT 计时",
+  },
+  PRDC2: {
+    1: "PRDC2 切削计时",
+  },
+  PRGN: {
+    1: "PRGN 程序",
+  },
+  ALARM: {
+    1: "ALARM 报警",
   },
 };
 

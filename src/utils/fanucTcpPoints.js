@@ -6,20 +6,29 @@
  *
  * 地址模型与后端 FanucFocasDataReader 一致：
  *   协议地址 = readType.param1.param2（如 axis.1.1 = X 轴机械坐标）
- *   - readType 采集项类型：axis/spindle/feed/mode/status/prgnum/alarm/tcode/macro/timer/pmc
+ *   - readType 采集项类型：axis/spindle/feed/mode/status/prgnum/exeprgname/alarm/tcode/macro/timer/count/diag/override/pmc
  *   - param1/param2 随类型含义不同，见下表各点位 desc；未用到的参数不填（地址中省略）
  *
  * 数据来源：
  *   - FANUC FOCAS2 官方函数库 fwlib32 读取函数族（cnc_rdaxisdata / cnc_acts /
- *     cnc_rdspload / cnc_actf / cnc_statinfo / cnc_rdprgnum / cnc_rdalmmsg /
- *     cnc_rdmacro / cnc_rdtimer / pmc_rdpmcrng）。
+ *     cnc_rdspload / cnc_actf / cnc_statinfo / cnc_rdprgnum / cnc_rdseqnum /
+ *     cnc_exeprgname / cnc_rdalmmsg / cnc_rdmacro / cnc_rdtimer / cnc_rdcount /
+ *     cnc_diagnoss / pmc_rdpmcrng）。
  *     注：FOCAS2 无 cnc_rdspindle / cnc_rdact / cnc_rdtcode / cnc_rdopmode / pmc_rdpmc，
  *     主轴转速/进给/刀具/操作模式分别由 cnc_acts / cnc_actf / 宏变量(#3901/#3902) / cnc_statinfo 读取。
  *   - 坐标轴序 1-6 = X/Y/Z/A/B/C；坐标类型 param2：1=机械 2=绝对 3=相对 4=剩余，
  *     后端映射 fwlib type（1=机械 0=绝对 2=相对 3=剩余），值 = data/10^dec。
  *   - 操作模式/运行状态来自 cnc_statinfo 的 ODBST.aut/run（0i-D/F 语义见 mode/status 点位 desc）。
- *   - 主轴倍率 FOCAS2 无直接读取函数，需按机床 PMC 梯形图用 pmc 分组读 G 区倍率地址（点位表不预置）。
- *   - 顺序号 FOCAS2 无直接读取函数，sequence_no 点位保留但不可读（后端返回 null）。
+ *   - 主轴/进给/快速倍率 FOCAS2 无直接读取函数，后端按 FANUC 标准梯形图约定直接读 PMC G30/G12/G14
+ *     （SOV0-SOV7 / OV0-OV7 / ROV1-ROV2，值即百分比）。台丽 0i-MF Plus 真机实测 G30=100（倍率旋钮 100%），
+ *     G12/G14 为同约定地址，均以机床 PMC 梯形图为准。
+ *   - 产量（count）用官方 cnc_rdcount（CntDataNo 0=总加工数 1=稼働程序加工数 2=特定加工数），
+ *     对应树根（RootCloud）FANUC 点位的 WorkPartAllCount 总产量 / WorkPartCount 当日产量 / RequiredPartCount 目标产量
+ *     （树根用 cnc_rdparam 读系统参数 6712/6711/6713，我们统一走 cnc_rdcount 官方函数，语义对应待真机核对）。
+ *   - 主轴温度（diag）用官方 cnc_diagnoss 读诊断号 403（树根实际配置值；标准 0i 中 403 常为第 4 轴负载，
+ *     台丽机是否为主轴温度待真机确认，若不对可在手动模式改诊断号）。
+ *   - 顺序号用官方 cnc_rdseqnum 读取（此前误标'无直接读取函数'，已实现）。
+ *   - 主程序名用官方 cnc_exeprgname 读取（此前只有程序号无程序名）。
  *   - 刀具号经系统宏变量读取：#3901 当前刀具、#3902 程序指定下一把刀具（FOCAS2 无直接读刀具函数）。
  *   - 时间参数 1=运行 2=切削 3=循环 4=上电（cnc_rdtimer type 1/2/3/0，单位分钟）。
  *   - 宏变量 1-9999（常用 500+ 用户宏变量，数值可含小数，值=mcr_val/10^dec_val）。
@@ -80,7 +89,7 @@ COORD_TYPES.forEach((ct) => {
 // ===== 主轴 spindle（param1=1转速 2倍率 3负载 4报警） =====
 const SPINDLE = [
   { key: "spindle_speed", name: "主轴转速", readType: "spindle", param1: 1, param2: null, dataType: "float", symbol: "S", desc: "主轴实际转速（cnc_acts），单位 rpm" },
-  { key: "spindle_override", name: "主轴倍率", readType: "spindle", param1: 2, param2: null, dataType: "int", symbol: "S%", desc: "主轴倍率百分比（FOCAS2 无直接读取函数，需按机床梯形图用 pmc 分组读 G 区倍率地址）" },
+  { key: "spindle_override", name: "主轴倍率", readType: "spindle", param1: 2, param2: null, dataType: "int", symbol: "S%", desc: "主轴倍率百分比（后端读 PMC G30=SOV0-SOV7，值即百分比，如 100=100%；地址按 FANUC 标准梯形图约定）" },
   { key: "spindle_load", name: "主轴负载", readType: "spindle", param1: 3, param2: null, dataType: "int", symbol: "S-Load", desc: "主轴电机负载（cnc_rdspload，负载在 data[0]），百分比" },
   { key: "spindle_alarm", name: "主轴报警", readType: "spindle", param1: 4, param2: null, dataType: "int", symbol: "S-Alm", desc: "主轴报警状态（cnc_rdalmmsg type=9；0=无报警 1=有报警）" },
 ];
@@ -106,7 +115,12 @@ const STATUS = [
 // ===== 程序 prgnum（param1=1程序号 2顺序号） =====
 const PRGNUM = [
   { key: "program_no", name: "当前程序号", readType: "prgnum", param1: 1, param2: null, dataType: "int", symbol: "O", desc: "当前运行程序号（cnc_rdprgnum）" },
-  { key: "sequence_no", name: "当前顺序号", readType: "prgnum", param1: 2, param2: null, dataType: "int", symbol: "N", desc: "当前程序段顺序号（FOCAS2 无直接读取函数，暂不可读）" },
+  { key: "sequence_no", name: "当前顺序号", readType: "prgnum", param1: 2, param2: null, dataType: "int", symbol: "N", desc: "当前程序段顺序号（cnc_rdseqnum；此前误标'无直接函数'，现已实现读取）" },
+];
+
+// ===== 主程序名 exeprgname（cnc_exeprgname，当前执行中的程序名） =====
+const EXEPRGNAME = [
+  { key: "main_program_name", name: "主程序名", readType: "exeprgname", param1: null, param2: null, dataType: "string", symbol: "PGM-NAME", desc: "当前执行中的程序名（cnc_exeprgname，最长 32 字节，GBK 解码）" },
 ];
 
 // ===== 报警 alarm（param1=1报警数量 2报警文本） =====
@@ -127,6 +141,28 @@ const TIMER = [
   { key: "time_cut", name: "切削时间", readType: "timer", param1: 2, param2: null, dataType: "int", symbol: "TIME-CUT", desc: "累计切削时间（cnc_rdtimer type=2），单位分钟" },
   { key: "time_cycle", name: "循环时间", readType: "timer", param1: 3, param2: null, dataType: "int", symbol: "TIME-CYC", desc: "累计循环时间（cnc_rdtimer type=3），单位分钟" },
   { key: "time_poweron", name: "上电时间", readType: "timer", param1: 4, param2: null, dataType: "int", symbol: "TIME-ON", desc: "累计通电时间（cnc_rdtimer type=0），单位分钟" },
+];
+
+// ===== 产量 count（param1=0总加工数 1稼働程序加工数 2特定加工数，cnc_rdcount） =====
+// 官方函数 cnc_rdcount（CntDataNo 0/1/2），比树根 cnc_rdparam 读系统参数更标准；
+// 树根语义：WorkPartAllCount=总产量(读参数6712) WorkPartCount=当日产量(6711) RequiredPartCount=目标产量(6713)，
+// 与 cnc_rdcount 的对应关系待真机核对（不同机床加工数画面/参数号可能不同）
+const COUNT = [
+  { key: "part_count_total", name: "总产量", readType: "count", param1: 0, param2: null, dataType: "int", symbol: "CNT-ALL", desc: "总加工数（cnc_rdcount CntDataNo=0，加工数1/総加工数）；树根 WorkPartAllCount 总产量语义，对应待真机核对" },
+  { key: "part_count_program", name: "当日产量", readType: "count", param1: 1, param2: null, dataType: "int", symbol: "CNT-PRG", desc: "稼働程序加工数（cnc_rdcount CntDataNo=1，加工数2）；树根 WorkPartCount 当日产量语义，对应待真机核对" },
+  { key: "part_count_target", name: "目标产量", readType: "count", param1: 2, param2: null, dataType: "int", symbol: "CNT-REQ", desc: "特定加工数（cnc_rdcount CntDataNo=2，加工数3）；树根 RequiredPartCount 目标产量语义，对应待真机核对" },
+];
+
+// ===== 诊断号 diag（param1=诊断号，cnc_diagnoss；主轴温度等机床特有数据） =====
+const DIAG = [
+  { key: "spindle_temp", name: "主轴温度", readType: "diag", param1: 403, param2: null, dataType: "int", symbol: "DIAG403", desc: "主轴温度（cnc_diagnoss 读诊断号 403；树根实际配置值，标准 0i 中 403 常为第 4 轴负载，台丽机是否为主轴温度待真机确认，不对可在手动模式改诊断号）" },
+];
+
+// ===== 倍率 override（param1=1进给倍率 2快速倍率，PMC G12/G14） =====
+// 主轴倍率已在 spindle.2（PMC G30）；进给/快速倍率 FANUC 标准梯形图约定 G12/G14，同 G30 做法
+const OVERRIDE = [
+  { key: "feedrate_override", name: "进给倍率", readType: "override", param1: 1, param2: null, dataType: "int", symbol: "G12", desc: "进给倍率百分比（后端读 PMC G12=OV0-OV7，值即百分比；FANUC 标准梯形图约定，同主轴倍率 G30 做法，地址以机床 PMC 梯形图为准）" },
+  { key: "rapid_override", name: "快速倍率", readType: "override", param1: 2, param2: null, dataType: "int", symbol: "G14", desc: "快速(早送)倍率百分比（后端读 PMC G14=ROV1/ROV2，值即百分比；FANUC 标准梯形图约定，地址以机床 PMC 梯形图为准）" },
 ];
 
 // ===== 宏变量 macro（param1=宏变量号 1-999，常用 500+） =====
@@ -155,7 +191,7 @@ const PMC = [
 ];
 
 // 完整点位表（顺序即分组顺序）
-export const FANUC_TCP_POINT_TABLE = [].concat(AXIS, SPINDLE, FEED, MODE, STATUS, PRGNUM, ALARM, TCODE, TIMER, MACRO, PMC);
+export const FANUC_TCP_POINT_TABLE = [].concat(AXIS, SPINDLE, FEED, MODE, STATUS, PRGNUM, EXEPRGNAME, ALARM, TCODE, TIMER, COUNT, DIAG, OVERRIDE, MACRO, PMC);
 
 // 每类采集项分组展示名（点位类型下拉标题），按 readType 分组
 export const FANUC_TCP_ROW_LABELS = {
@@ -165,9 +201,13 @@ export const FANUC_TCP_ROW_LABELS = {
   mode: "操作模式",
   status: "运行状态",
   prgnum: "程序",
+  exeprgname: "主程序名",
   alarm: "报警",
   tcode: "刀具",
   timer: "时间",
+  count: "产量",
+  diag: "诊断号",
+  override: "倍率",
   macro: "宏变量",
   pmc: "PMC信号",
 };

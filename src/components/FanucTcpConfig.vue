@@ -333,11 +333,15 @@ export default {
         { value: "feed", label: "feed 进给", desc: "进给：param1=1实际进给(cnc_actf，单位随G94/G95 mm/min或mm/rev)；进给倍率需 PMC 读取" },
         { value: "mode", label: "mode 操作模式", desc: "操作模式：无参数（ODBST.aut：0=MDI 1=MEM 2=*** 3=EDIT 4=HANDLE 5=JOG 6=Teach JOG 7=Teach HANDLE 8=INC 9=REF 10=RMT 11=TEST）" },
         { value: "status", label: "status 运行状态", desc: "运行状态：param1=1运行/加工中(run==START) 2停止(run==STOP) 3急停(emergency) 4自动方式(aut==MEM)" },
-        { value: "prgnum", label: "prgnum 程序", desc: "程序：param1=1程序号(cnc_rdprgnum)；2顺序号(FOCAS2无直接函数，不可读)" },
+        { value: "prgnum", label: "prgnum 程序", desc: "程序：param1=1程序号(cnc_rdprgnum)；2顺序号(cnc_rdseqnum)" },
+        { value: "exeprgname", label: "exeprgname 主程序名", desc: "主程序名：无参数（cnc_exeprgname，当前执行中的程序名，最长32字节）" },
         { value: "alarm", label: "alarm 报警", desc: "报警：param1=1报警数量(cnc_rdalmmsg num输出) 2报警文本(多条取最后一条，GBK)" },
         { value: "tcode", label: "tcode 刀具", desc: "刀具：param1=1当前刀具(宏#3901) 2下一把刀具(宏#3902)；FOCAS2无直接读刀具函数" },
         { value: "macro", label: "macro 宏变量", desc: "宏变量：param1=宏变量号(1-9999，常用 500+)，值=mcr_val/10^dec_val" },
         { value: "timer", label: "timer 时间", desc: "时间：param1=1运行 2切削 3循环 4上电（cnc_rdtimer type 1/2/3/0，单位分钟）" },
+        { value: "count", label: "count 产量", desc: "产量：param1=0总加工数 1稼働程序加工数(当日产量) 2特定加工数(目标产量)（cnc_rdcount CntDataNo 0/1/2；对应树根 WorkPartAllCount/WorkPartCount/RequiredPartCount 语义，待真机核对）" },
+        { value: "diag", label: "diag 诊断号", desc: "诊断号：param1=诊断号（cnc_diagnoss；主轴温度等机床特有数据，主轴温度按树根配置=403，待真机确认）" },
+        { value: "override", label: "override 倍率", desc: "倍率：param1=1进给倍率(G12) 2快速倍率(G14)（PMC 读，FANUC 标准梯形图约定，同主轴倍率 G30 做法，地址以机床梯形图为准）" },
         { value: "pmc", label: "pmc PMC信号", desc: "PMC信号：param1=1(F区) 2(G区) 3(X区) 4(Y区)，param2=字节地址号；读整字节，具体地址以机床 PMC 梯形图为准，待真机验证" },
       ],
     };
@@ -437,10 +441,12 @@ export default {
         this.$message.error("采集项不能为空");
         return;
       }
-      // 参数1：mode 无参数概念可留空，其余采集项必填
+      // 参数1：mode/exeprgname 无参数概念可留空，其余采集项必填（count.0 总产量为 0 合法）
+      // 注意：空字符串判定必须用 ===，否则 JS 中 0 == "" 为 true 会把合法的 param1=0 误判为空
       if (
         this.fanucTcpForm.readType != "mode" &&
-        (this.fanucTcpForm.param1 == null || this.fanucTcpForm.param1 == "")
+        this.fanucTcpForm.readType != "exeprgname" &&
+        (this.fanucTcpForm.param1 == null || this.fanucTcpForm.param1 === "")
       ) {
         this.$message.error("参数1不能为空");
         return;
