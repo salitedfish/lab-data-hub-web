@@ -26,6 +26,13 @@
  *   - PMC 信号：param1=1(F)/2(G)/3(X)/4(Y)，param2=字节地址号；读整字节，位需自行按位解析；
  *     具体 F/G/X/Y 地址以机床 PMC 梯形图为准，点位表先给常见几个，**完整 PMC 点位待真机验证后补充**。
  *   - JNA 结构体字段偏移为 FOCAS2 对接最关键环节，第一次真机/NCGuide 验证后需核对修正。
+ *   - 真机实测（台丽 0i-MF Plus，2026-08-26，cnc_rdaxisdata len 输出确认受控轴 4 根）：
+ *     · 本机轴序为 X/Y/Z/A（4 根），B/C 在此机读取返回 null（点位保留，供多轴机使用）；
+ *     · 四类坐标（机械/绝对/相对/剩余）均实测有效，dec=3（0.001mm），值 = data/10^dec；
+ *     · #3901 当前刀具 dec_val=7（刀具 44 存为 mcr_val=440000000），刀具号必须按 10^dec 换算；
+ *     · 未使用的宏变量 #500+ 实测返回 0（不报错）；F1/F0/G8 实测字节值 0x80/0x40/0x31，
+ *       位含义需按机床 PMC 梯形图确认（点位表 pmc 分组为占位示例）；
+ *     · cnc_actf 官方单位 0.1mm/min，后端已除以 10 换算 mm/min；cnc_acts 单位 rpm 为原值。
  *
  * 每个点位字段：
  *   key       建议的物模型属性标识（选点后自动填入 code，可编辑）
@@ -133,15 +140,18 @@ for (let n = 500; n <= 999; n++) {
     param2: null,
     dataType: "float",
     symbol: "#" + n,
-    desc: "宏变量 #" + n + "（可含小数，值=mcr_val/10^dec_val；未使用的宏变量读取可能返回错误，建议先确认机床已使用该变量）",
+    desc: "宏变量 #" + n + "（可含小数，值=mcr_val/10^dec_val；未使用的宏变量实测返回 0 而非报错）",
   });
 }
 
 // ===== PMC 信号 pmc（param1=1(F) 2(G) 3(X) 4(Y)，param2=字节地址号；整字节返回，位需自行按位解析） =====
+// 台丽 0i-MF Plus 真机实测（2026-08-26）：F1=0x80、F0=0x40、G8=0x31（机床 MEM 待机态）。
+// 每个位代表什么信号只能以该机床 PMC 梯形图为准（F/G 区含义由梯形图定义，非 FOCAS2 固定），
+// 建议用平台 pmc 点位 + 机床梯形图逐一核对后再把 bit 映射固化成业务点位。
 const PMC = [
-  { key: "pmc_f1_auto", name: "F1 自动运行信号", readType: "pmc", param1: 1, param2: 1, dataType: "int", symbol: "F1", desc: "F 区地址 1 整字节（位0=自动运行）；地址以机床 PMC 梯形图为准，待真机验证" },
-  { key: "pmc_f0_estop", name: "F0 急停信号", readType: "pmc", param1: 1, param2: 0, dataType: "int", symbol: "F0", desc: "F 区地址 0 整字节（急停相关）；地址以机床 PMC 梯形图为准，待真机验证" },
-  { key: "pmc_g8_spindle", name: "G8 主轴信号", readType: "pmc", param1: 2, param2: 8, dataType: "int", symbol: "G8", desc: "G 区地址 8 整字节（主轴相关）；地址以机床 PMC 梯形图为准，待真机验证" },
+  { key: "pmc_f1_auto", name: "F1 自动运行信号", readType: "pmc", param1: 1, param2: 1, dataType: "int", symbol: "F1", desc: "F 区地址 1 整字节（台丽实测 0x80，待机态；自动运行信号一般在 F1.0/F1.1，具体以机床 PMC 梯形图为准）" },
+  { key: "pmc_f0_estop", name: "F0 急停信号", readType: "pmc", param1: 1, param2: 0, dataType: "int", symbol: "F0", desc: "F 区地址 0 整字节（台丽实测 0x40；急停/报警相关位以机床 PMC 梯形图为准）" },
+  { key: "pmc_g8_spindle", name: "G8 主轴信号", readType: "pmc", param1: 2, param2: 8, dataType: "int", symbol: "G8", desc: "G 区地址 8 整字节（台丽实测 0x31；主轴相关位以机床 PMC 梯形图为准）" },
 ];
 
 // 完整点位表（顺序即分组顺序）
