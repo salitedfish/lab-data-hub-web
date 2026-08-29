@@ -388,6 +388,16 @@
           />
         </el-tab-pane>
         <el-tab-pane
+          label="Mitsubishi_CNC_TCP配置"
+          name="mitsubishiCncTcpConfig"
+          v-if="component?.netType == 'MITSUBISHI_CNC_TCP'"
+        >
+          <MitsubishiCncTcpConfig
+            :device-sn="product.productSn"
+            :isProductIn="true"
+          />
+        </el-tab-pane>
+        <el-tab-pane
           label="Database_TCP配置"
           name="databaseTcpConfig"
           v-if="component?.netType == 'DATABASE_TCP'"
@@ -1074,6 +1084,7 @@ import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
 import BrotherTcpConfig from "@/components/BrotherTcpConfig";
 import FanucTcpConfig from "@/components/FanucTcpConfig";
 import MitsubishiTcpConfig from "@/components/MitsubishiTcpConfig";
+import MitsubishiCncTcpConfig from "@/components/MitsubishiCncTcpConfig";
 
 export default {
   name: "ProductDetail",
@@ -1086,6 +1097,7 @@ export default {
     BrotherTcpConfig,
     FanucTcpConfig,
     MitsubishiTcpConfig,
+    MitsubishiCncTcpConfig,
   },
   created() {
     this.productId = this.$route.query.id;

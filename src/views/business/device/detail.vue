@@ -332,6 +332,16 @@
           />
         </el-tab-pane>
         <el-tab-pane
+          label="Mitsubishi_CNC_TCP配置"
+          name="mitsubishiCncTcpConfig"
+          v-if="component?.netType == 'MITSUBISHI_CNC_TCP'"
+        >
+          <MitsubishiCncTcpConfig
+            :device-sn="device.deviceSn"
+            :enabled="modbusEnabled"
+          />
+        </el-tab-pane>
+        <el-tab-pane
           label="Database_TCP配置"
           name="databaseTcpConfig"
           v-if="component?.netType == 'DATABASE_TCP'"
@@ -1317,6 +1327,7 @@ import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
 import BrotherTcpConfig from "@/components/BrotherTcpConfig";
 import FanucTcpConfig from "@/components/FanucTcpConfig";
 import MitsubishiTcpConfig from "@/components/MitsubishiTcpConfig";
+import MitsubishiCncTcpConfig from "@/components/MitsubishiCncTcpConfig";
 
 export default {
   name: "DeviceDetail",
@@ -1328,6 +1339,7 @@ export default {
     BrotherTcpConfig,
     FanucTcpConfig,
     MitsubishiTcpConfig,
+    MitsubishiCncTcpConfig,
   },
   created() {
     this.deviceId = this.$route.query.id;

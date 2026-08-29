@@ -62,6 +62,11 @@
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
+        <el-table-column prop="protocolMode" label="协议类型" width="110">
+          <template slot-scope="scope">
+            {{ protocolModeName(scope.row.protocolMode) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="areaCode" label="软元件" width="150">
           <template slot-scope="scope">
             {{ areaCodeName(scope.row.areaCode) }}
@@ -126,6 +131,25 @@
               v-model="mitsubishiTcpForm.code"
               placeholder="请输入标识"
             />
+          </el-form-item>
+          <el-form-item label="协议类型" prop="protocolMode" required>
+            <el-select
+              v-model="mitsubishiTcpForm.protocolMode"
+              placeholder="请选择协议帧类型"
+            >
+              <el-option label="MC3E (QnA兼容3E帧)" value="3E"></el-option>
+              <el-option label="MC1E (标准二进制帧)" value="1E"></el-option>
+            </el-select>
+            <div
+              style="
+                color: #999;
+                font-size: 12px;
+                line-height: 18px;
+                margin-top: 4px;
+              "
+            >
+              MC1E 为老式 PLC 标准二进制帧（端口 5007），协议细节待真机验证
+            </div>
           </el-form-item>
           <el-form-item label="软元件" prop="areaCode" required>
             <el-select
@@ -356,6 +380,7 @@ export default {
         belongType: null,
         code: null,
         createTime: null,
+        protocolMode: "3E",
         areaCode: null,
         startAddress: null,
         length: null,
@@ -363,6 +388,14 @@ export default {
         delayTime: null,
       };
       this.resetForm("mitsubishiTcpForm");
+    },
+    // 协议帧模式代码转名称展示（null 默认 MC3E）
+    protocolModeName(mode) {
+      const modeMap = { "3E": "MC3E", "1E": "MC1E" };
+      if (mode == null || mode == "") {
+        return "MC3E";
+      }
+      return modeMap[mode] != null ? modeMap[mode] : mode;
     },
     resetForm(formName) {
       if (this.$refs[formName]) {
@@ -378,6 +411,7 @@ export default {
       this.mitsubishiTcpForm.intervalTime = 10;
       this.mitsubishiTcpForm.delayTime = 100;
       this.mitsubishiTcpForm.areaCode = 0xa8;
+      this.mitsubishiTcpForm.protocolMode = "3E";
     },
     async editMitsubishiTcpConfig(item) {
       this.editLoading = item.id;
