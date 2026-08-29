@@ -1381,6 +1381,11 @@ export default {
       });
     },
     handleTabClick(tab) {
+      //物模型页面（协议点位增删改后自动同步的物模型属性，切回来重新拉取）
+      if (tab.name === "thingModel") {
+        //初始化数据
+        this.getPropertyList();
+      }
       //设备列表页
       if (tab.name === "deviceList") {
         //初始化数据

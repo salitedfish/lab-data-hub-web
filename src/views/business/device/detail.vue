@@ -1613,6 +1613,11 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     handleTabClick(tab) {
+      //物模型页面（协议点位增删改后自动同步的物模型属性，切回来重新拉取）
+      if (tab.name === "thingModel") {
+        //初始化数据
+        this.getPropertyList();
+      }
       //告警配置页面
       if (tab.name === "alarmConfig") {
         //初始化数据

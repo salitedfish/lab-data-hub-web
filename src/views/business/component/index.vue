@@ -103,6 +103,13 @@
             </el-button>
             <el-button
               size="mini"
+              class="action-btn copy-btn"
+              icon="el-icon-document-copy"
+              @click.stop="handleCopy(item)"
+              >复制
+            </el-button>
+            <el-button
+              size="mini"
               class="action-btn debug-btn"
               icon="el-icon-connection"
               @click.stop="showComponentDetail(item)"
@@ -1280,6 +1287,36 @@ export default {
         this.title = "修改网络组件";
       });
     },
+    /** 复制网络组件：打开新增态表单（协议绑定解锁）预填原数据，名称加"副本"，保存走新增 */
+    handleCopy(row) {
+      this.reset();
+      const id = row.id || this.ids[0];
+      getComponent(id).then((response) => {
+        const data = response.data;
+        this.form = {
+          ...data,
+          id: null,
+          name: (data.name || "") + "副本",
+        };
+        // 先按原网络类型初始化动态配置默认值（会重置 dynamicConfig）
+        if (this.form.netType) {
+          this.handleNetTypeChange(this.form.netType);
+        }
+        // 协议绑定：新增态可重新选择，原协议作为默认选中
+        this.selectProtocolId = data.protocolId;
+        this.form.protocolId = null;
+        // 用原组件的动态配置覆盖默认值
+        if (data.otherConfig) {
+          try {
+            this.form.dynamicConfig = JSON.parse(data.otherConfig);
+          } catch (e) {
+            console.error("解析组件动态配置失败", e);
+          }
+        }
+        this.open = true;
+        this.title = "复制网络组件";
+      });
+    },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate((valid) => {
@@ -1568,6 +1605,9 @@ export default {
   text-align: center;
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 4px;
   position: relative;
   z-index: 2;
 }
@@ -1602,6 +1642,18 @@ export default {
   background: linear-gradient(to bottom, #fff0ed, #ffeae8);
   border-color: #ffa39e;
   color: #f5222d;
+}
+
+.copy-btn {
+  background: linear-gradient(to bottom, #f6ffed, #f0fdf4);
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.copy-btn:hover {
+  background: linear-gradient(to bottom, #f0fdf4, #e6fce8);
+  border-color: #95de64;
+  color: #389e0d;
 }
 
 /* 添加分页容器样式 */

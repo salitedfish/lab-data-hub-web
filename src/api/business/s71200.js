@@ -60,3 +60,11 @@ export function readS71200TcpSwitchByProduct(data) {
     data: data
   })
 }
+
+// 下发配置到该产品全部设备
+export function syncConfigToDevice(productSn) {
+  return request({
+    url: '/business/s71200/syncConfigToDevice?productSn=' + productSn,
+    method: 'post'
+  })
+}

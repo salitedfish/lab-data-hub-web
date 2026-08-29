@@ -37,6 +37,16 @@
             @click="addMitsubishiCncTcpConfig"
             >添加配置</el-button
           >
+          <el-button
+            v-if="isProductIn"
+            type="warning"
+            icon="el-icon-download"
+            class="action-btn"
+            :loading="syncLoading"
+            :disabled="syncLoading"
+            @click="syncToDevice"
+            >下发到设备</el-button
+          >
         </div>
       </div>
       <div class="filter-bar">
@@ -275,6 +285,7 @@ import {
   getMitsubishiCncTcp,
 } from "@/api/business/mitsubishiCncTcp";
 import { readMitsubishiCncTcpSwitchByDevice } from "@/api/business/mitsubishiCncTcp";
+import { syncConfigToDevice } from "@/api/business/mitsubishiCncTcp";
 // 内置 MOCHA 点位表：语义点位 → 协议地址（采集项[.轴号]），数据来源见 utils/cncTcpPoints.js
 import {
   CNC_TCP_POINT_TABLE,
@@ -311,6 +322,8 @@ export default {
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
+      // 下发到设备按钮 loading（产品模式下可用）
+      syncLoading: false,
       // 点位选择模式：false=点选点位（自动填地址），true=手动输入采集项/轴号
       manualMode: false,
       // 当前选中的点位对象（用于地址信息展示）
@@ -375,6 +388,20 @@ export default {
     this.getMitsubishiCncTcpConfigByDeviceSn();
   },
   methods: {
+    /** 产品模式：把该产品模板点位下发给其全部设备 */
+    async syncToDevice() {
+      this.syncLoading = true;
+      try {
+        const res = await syncConfigToDevice(this.deviceSn);
+        if (res?.code == 200) {
+          this.$message.success("已下发到该产品全部设备");
+        }
+      } catch (e) {
+        console.error("下发配置到设备失败", e);
+      } finally {
+        this.syncLoading = false;
+      }
+    },
     // 点位名称（命中点位表显示语义名，未命中显示协议地址 readType[.axisNo]）
     mitsubishiCncPointName(row) {
       if (!row) {
@@ -480,6 +507,7 @@ export default {
         belongSn: null,
         belongType: null,
         code: null,
+        name: null,
         createTime: null,
         readType: null,
         axisNo: null,
@@ -513,6 +541,8 @@ export default {
       this.mitsubishiCncTcpForm.readType = p.readType;
       this.mitsubishiCncTcpForm.axisNo = p.axisNo != null ? p.axisNo : null;
       this.mitsubishiCncTcpForm.code = p.key;
+      // 点位名称（物模型属性名用，如"机械坐标 X"）
+      this.mitsubishiCncTcpForm.name = p.name;
     },
     // 手动模式切换采集项：清理残留轴号，避免旧值带入新采集项
     onReadTypeChange(value) {
@@ -560,6 +590,7 @@ export default {
       this.mitsubishiCncTcpForm.readType = "mechpos";
       this.mitsubishiCncTcpForm.axisNo = 1;
       this.mitsubishiCncTcpForm.code = defaultPoint.key;
+      this.mitsubishiCncTcpForm.name = defaultPoint.name;
       this.mitsubishiCncTcpForm.intervalTime = 10;
       this.mitsubishiCncTcpForm.delayTime = 100;
     },
@@ -587,6 +618,10 @@ export default {
             // 保留用户已有标识；标识为空时补建议标识
             if (!this.mitsubishiCncTcpForm.code) {
               this.mitsubishiCncTcpForm.code = p.key;
+            }
+            // 点位名称为空时补点位表语义名（旧数据未存 name）
+            if (!this.mitsubishiCncTcpForm.name) {
+              this.mitsubishiCncTcpForm.name = p.name;
             }
           } else {
             this.manualMode = true;

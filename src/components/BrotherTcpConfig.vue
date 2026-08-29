@@ -37,6 +37,16 @@
             @click="addBrotherTcpConfig"
             >添加配置</el-button
           >
+          <el-button
+            v-if="isProductIn"
+            type="warning"
+            icon="el-icon-download"
+            class="action-btn"
+            :loading="syncLoading"
+            :disabled="syncLoading"
+            @click="syncToDevice"
+            >下发到设备</el-button
+          >
         </div>
       </div>
       <div class="filter-bar">
@@ -270,6 +280,7 @@ import {
   getBrotherTcp,
 } from "@/api/business/brotherTcp";
 import { readBrotherTcpSwitchByDevice } from "@/api/business/brotherTcp";
+import { syncConfigToDevice } from "@/api/business/brotherTcp";
 // 内置 PDSP 点位表：语义点位 → 协议地址（数据区.行号.字段序号），数据来源见 utils/brotherTcpPoints.js
 import {
   BROTHER_TCP_POINT_TABLE,
@@ -304,6 +315,8 @@ export default {
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
+      // 下发到设备按钮 loading（产品模式下可用）
+      syncLoading: false,
       // 点位选择模式：false=点选点位（自动填地址），true=手动输入数据区/行号/字段序号
       manualMode: false,
       // 当前选中的点位对象（用于地址信息展示）
@@ -373,6 +386,20 @@ export default {
     this.getBrotherTcpConfigByDeviceSn();
   },
   methods: {
+    /** 产品模式：把该产品模板点位下发给其全部设备 */
+    async syncToDevice() {
+      this.syncLoading = true;
+      try {
+        const res = await syncConfigToDevice(this.deviceSn);
+        if (res?.code == 200) {
+          this.$message.success("已下发到该产品全部设备");
+        }
+      } catch (e) {
+        console.error("下发配置到设备失败", e);
+      } finally {
+        this.syncLoading = false;
+      }
+    },
     async getBrotherTcpConfigByDeviceSn() {
       try {
         this.brotherTcpParams.belongSn = this.deviceSn;
@@ -479,6 +506,7 @@ export default {
         belongSn: null,
         belongType: null,
         code: null,
+        name: null,
         createTime: null,
         dataArea: null,
         rowNumber: null,
@@ -514,6 +542,8 @@ export default {
       this.brotherTcpForm.rowNumber = p.rowNumber;
       this.brotherTcpForm.fieldIndex = p.fieldIndex;
       this.brotherTcpForm.code = p.key;
+      // 点位名称（物模型属性名用，如"机械坐标 X"）
+      this.brotherTcpForm.name = p.name;
     },
     // 手动/点位模式切换；切回点位模式时若当前地址命中点表则预选
     toggleManualMode() {
@@ -559,6 +589,7 @@ export default {
       this.brotherTcpForm.rowNumber = 4;
       this.brotherTcpForm.fieldIndex = 1;
       this.brotherTcpForm.code = defaultPoint.key;
+      this.brotherTcpForm.name = defaultPoint.name;
       this.brotherTcpForm.intervalTime = 10;
       this.brotherTcpForm.delayTime = 100;
     },
@@ -587,6 +618,10 @@ export default {
             // 保留用户已有标识；标识为空时补建议标识
             if (!this.brotherTcpForm.code) {
               this.brotherTcpForm.code = p.key;
+            }
+            // 点位名称为空时补点位表语义名（旧数据未存 name）
+            if (!this.brotherTcpForm.name) {
+              this.brotherTcpForm.name = p.name;
             }
           } else {
             this.manualMode = true;

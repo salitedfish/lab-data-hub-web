@@ -60,3 +60,11 @@ export function readOmronFinsTcpSwitchByProduct(data) {
     data: data
   })
 }
+
+// 下发配置到该产品全部设备
+export function syncConfigToDevice(productSn) {
+  return request({
+    url: '/business/omronFins/syncConfigToDevice?productSn=' + productSn,
+    method: 'post'
+  })
+}

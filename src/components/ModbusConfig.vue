@@ -37,6 +37,16 @@
             @click="addModbusConfig"
             >添加配置</el-button
           >
+          <el-button
+            v-if="isProductIn"
+            type="warning"
+            icon="el-icon-download"
+            class="action-btn"
+            :loading="syncLoading"
+            :disabled="syncLoading"
+            @click="syncToDevice"
+            >下发到设备</el-button
+          >
         </div>
       </div>
       <div class="filter-bar">
@@ -182,6 +192,7 @@ import {
   getModbus,
 } from "@/api/business/modbus";
 import { readSwitchByDevice } from "@/api/business/modbus";
+import { syncConfigToDevice } from "@/api/business/modbus";
 
 export default {
   name: "ModbusConfig",
@@ -208,6 +219,8 @@ export default {
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
+      // 下发到设备按钮 loading（产品模式下可用）
+      syncLoading: false,
       modbusParams: {
         pageNum: 1,
         pageSize: 10,
@@ -225,6 +238,20 @@ export default {
     this.getModbusConfigByDeviceSn();
   },
   methods: {
+    /** 产品模式：把该产品模板点位下发给其全部设备 */
+    async syncToDevice() {
+      this.syncLoading = true;
+      try {
+        const res = await syncConfigToDevice(this.deviceSn);
+        if (res?.code == 200) {
+          this.$message.success("已下发到该产品全部设备");
+        }
+      } catch (e) {
+        console.error("下发配置到设备失败", e);
+      } finally {
+        this.syncLoading = false;
+      }
+    },
     async getModbusConfigByDeviceSn() {
       this.modbusParams.belongSn = this.deviceSn;
       try {

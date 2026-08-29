@@ -122,6 +122,12 @@
                 >编辑</el-button>
                 <el-button
                   type="text"
+                  icon="el-icon-document-copy"
+                  @click.stop="handleCopy(item)"
+                  class="footer-btn"
+                >复制</el-button>
+                <el-button
+                  type="text"
                   icon="el-icon-delete"
                   @click.stop="handleDelete(item)"
                   v-hasPermi="['business:product:remove']"
@@ -372,6 +378,25 @@ export default {
         this.open = true
         this.title = "编辑产品"
         this.handleProductChange(this.form.deviceType);
+      })
+    },
+    /** 复制产品：打开新增态表单（SN/设备类型/组件解锁）预填原数据，SN 加"-副本"，携带 copyFromId 连产品级点位模板一起复制 */
+    handleCopy(row) {
+      this.reset()
+      this.isEdit = false
+      const id = row.id || this.ids[0]
+      getProduct(id).then(response => {
+        const data = response.data
+        this.form = {
+          ...data,
+          id: null,
+          productSn: (data.productSn || "") + "-副本",
+          componentName: null,
+          copyFromId: id,
+        }
+        this.open = true
+        this.title = "复制产品"
+        this.handleProductChange(this.form.deviceType)
       })
     },
     submitForm() {
@@ -654,6 +679,9 @@ export default {
 .card-footer-actions {
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 4px;
   padding: 16px 20px;
   background: #f8fafc;
   border-top: 1px solid #f0f2f5;

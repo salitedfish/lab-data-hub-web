@@ -154,6 +154,12 @@
                 >编辑</el-button>
                 <el-button
                   type="text"
+                  icon="el-icon-document-copy"
+                  @click.stop="handleCopy(item)"
+                  class="footer-btn"
+                >复制</el-button>
+                <el-button
+                  type="text"
                   icon="el-icon-delete"
                   @click.stop="handleDelete(item)"
                   v-hasPermi="['business:device:remove']"
@@ -475,6 +481,25 @@ export default {
         this.handleProductChange(this.form.productId)
       })
     },
+    /** 复制设备：打开新增态表单（编码/产品解锁）预填原数据，编码加"-副本"，携带 copyFromId 连设备级点位一起复制（换产品即换组件，不改框架） */
+    handleCopy(row) {
+      this.reset()
+      this.isEdit = false
+      const id = row.id || this.ids[0]
+      getDevice(id).then(response => {
+        const data = response.data
+        this.form = {
+          ...data,
+          id: null,
+          deviceSn: (data.deviceSn || "") + "-副本",
+          copyFromId: id,
+        }
+        this.open = true
+        this.title = "复制设备"
+        this.selectedDeviceType = this.form.deviceType
+        this.handleProductChange(this.form.productId)
+      })
+    },
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
@@ -732,6 +757,9 @@ export default {
 .card-footer-actions {
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 4px;
   padding: 16px 20px;
   background: #f8fafc;
   border-top: 1px solid #f0f2f5;

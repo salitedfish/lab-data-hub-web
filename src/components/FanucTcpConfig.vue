@@ -37,6 +37,16 @@
             @click="addFanucTcpConfig"
             >添加配置</el-button
           >
+          <el-button
+            v-if="isProductIn"
+            type="warning"
+            icon="el-icon-download"
+            class="action-btn"
+            :loading="syncLoading"
+            :disabled="syncLoading"
+            @click="syncToDevice"
+            >下发到设备</el-button
+          >
         </div>
       </div>
       <div class="filter-bar">
@@ -278,6 +288,7 @@ import {
   getFanucFocas,
 } from "@/api/business/fanucFocas";
 import { readFanucFocasSwitchByDevice } from "@/api/business/fanucFocas";
+import { syncConfigToDevice } from "@/api/business/fanucFocas";
 // 内置 FOCAS2 点位表：语义点位 → 协议地址（采集项.参数1.参数2），数据来源见 utils/fanucTcpPoints.js
 import {
   FANUC_TCP_POINT_TABLE,
@@ -312,6 +323,8 @@ export default {
       // 每行独立 loading 状态（用行 id 区分，避免点击一行导致整列按钮一起 loading）
       editLoading: null,
       deleteLoading: null,
+      // 下发到设备按钮 loading（产品模式下可用）
+      syncLoading: false,
       // 点位选择模式：false=点选点位（自动填地址），true=手动输入采集项/参数1/参数2
       manualMode: false,
       // 当前选中的点位对象（用于地址信息展示）
@@ -390,6 +403,20 @@ export default {
     this.getFanucTcpConfigByDeviceSn();
   },
   methods: {
+    /** 产品模式：把该产品模板点位下发给其全部设备 */
+    async syncToDevice() {
+      this.syncLoading = true;
+      try {
+        const res = await syncConfigToDevice(this.deviceSn);
+        if (res?.code == 200) {
+          this.$message.success("已下发到该产品全部设备");
+        }
+      } catch (e) {
+        console.error("下发配置到设备失败", e);
+      } finally {
+        this.syncLoading = false;
+      }
+    },
     // 点位名称（命中点位表显示语义名，未命中显示协议地址 readType.param1.param2）
     fanucPointName(row) {
       if (!row) {
@@ -500,6 +527,7 @@ export default {
         belongSn: null,
         belongType: null,
         code: null,
+        name: null,
         createTime: null,
         readType: null,
         param1: null,
@@ -535,6 +563,8 @@ export default {
       this.fanucTcpForm.param1 = p.param1;
       this.fanucTcpForm.param2 = p.param2;
       this.fanucTcpForm.code = p.key;
+      // 点位名称（物模型属性名用，如"机械坐标 X"）
+      this.fanucTcpForm.name = p.name;
     },
     // 手动模式切换采集项：清理残留参数，避免旧值带入新采集项
     onReadTypeChange(value) {
@@ -585,6 +615,7 @@ export default {
       this.fanucTcpForm.param1 = 1;
       this.fanucTcpForm.param2 = 1;
       this.fanucTcpForm.code = defaultPoint.key;
+      this.fanucTcpForm.name = defaultPoint.name;
       this.fanucTcpForm.intervalTime = 10;
       this.fanucTcpForm.delayTime = 100;
     },
@@ -613,6 +644,10 @@ export default {
             // 保留用户已有标识；标识为空时补建议标识
             if (!this.fanucTcpForm.code) {
               this.fanucTcpForm.code = p.key;
+            }
+            // 点位名称为空时补点位表语义名（旧数据未存 name）
+            if (!this.fanucTcpForm.name) {
+              this.fanucTcpForm.name = p.name;
             }
           } else {
             this.manualMode = true;
