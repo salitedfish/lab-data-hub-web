@@ -7,15 +7,12 @@
           <h2 class="device-title">{{ device.deviceName }}</h2>
           <span class="device-model">{{ device.deviceSn }}</span>
         </div>
-        <el-switch
-          v-model="device.status"
-          :active-value="'1'"
-          :inactive-value="'0'"
-          active-text="在线"
-          inactive-text="离线"
-          active-color="#13ce66"
-          inactive-color="#ff4949"
-        />
+        <el-tag
+          :type="device.status == 1 ? 'success' : 'danger'"
+          effect="dark"
+        >
+          {{ device.status == 1 ? "在线" : "离线" }}
+        </el-tag>
       </div>
 
       <el-row :gutter="24" class="device-stats">

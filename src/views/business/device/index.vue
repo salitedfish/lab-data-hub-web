@@ -211,7 +211,7 @@
             <el-input v-model="form.deviceSn" placeholder="请输入设备编码" :disabled="form.id"/>
           </el-form-item>
           <el-form-item label="关联产品" prop="productId" required>
-            <el-select v-model="form.productId" placeholder="请选择产品" :disabled="form.id" @change="handleProductChange" >
+            <el-select v-model="form.productId" placeholder="请选择产品" :disabled="form.id" @change="handleProductChange" filterable>
               <el-option
                 v-for="item in productList"
                 :key="item.id"

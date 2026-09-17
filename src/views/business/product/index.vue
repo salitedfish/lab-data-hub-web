@@ -191,7 +191,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="网络组件">
-            <el-select v-model="form.componentId" placeholder="请选择" :disabled="form.componentName">
+            <el-select v-model="form.componentId" placeholder="请选择" :disabled="form.componentName" filterable>
               <el-option
                 v-for="item in componentList"
                 :key="item.id"
