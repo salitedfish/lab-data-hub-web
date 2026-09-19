@@ -189,8 +189,8 @@
                 value="FANUC_TCP"
               ></el-option>
               <el-option
-                label="MITSUBISHI_TCP"
-                value="MITSUBISHI_TCP"
+                label="MITSUBISHI_MC3E_TCP"
+                value="MITSUBISHI_MC3E_TCP"
               ></el-option>
               <el-option
                 label="MITSUBISHI_CNC_TCP"
@@ -461,7 +461,7 @@
                   form.netType === 'OMRONFINS_TCP' ||
                   form.netType === 'BROTHER_TCP' ||
                   form.netType === 'FANUC_TCP' ||
-                  form.netType === 'MITSUBISHI_TCP' ||
+                  form.netType === 'MITSUBISHI_MC3E_TCP' ||
                   form.netType === 'MITSUBISHI_CNC_TCP'
                 "
               >
@@ -920,7 +920,7 @@ export default {
               },
             ],
           };
-        case "MITSUBISHI_TCP":
+        case "MITSUBISHI_MC3E_TCP":
           return {
             ...baseRules,
             "dynamicConfig.ipAddr": [
@@ -1170,9 +1170,13 @@ export default {
           port: "10883",
           path: "/**",
         };
+      } else if (netType === "OMRONFINS_TCP") {
+        this.form.dynamicConfig = {
+          timeout: 3000,
+          port: 9600,
+        };
       } else if (
         netType === "MODBUS_TCP" ||
-        netType === "OMRONFINS_TCP" ||
         netType === "BROTHER_TCP" ||
         netType === "DATABASE_TCP"
       ) {
@@ -1184,7 +1188,7 @@ export default {
           timeout: 3000,
           port: 8193,
         };
-      } else if (netType === "MITSUBISHI_TCP") {
+      } else if (netType === "MITSUBISHI_MC3E_TCP") {
         this.form.dynamicConfig = {
           timeout: 3000,
           port: 5007,

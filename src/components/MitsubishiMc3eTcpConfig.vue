@@ -2,7 +2,7 @@
   <div class="modbus-config">
     <div class="tab-content">
       <div class="tab-header">
-        <div class="tab-title">MITSUBISHI_TCP配置</div>
+        <div class="tab-title">MITSUBISHI_MC3E_TCP配置</div>
         <div class="tab-actions" style="right: 20px" v-if="!isProductIn">
           <span style="font-weight: 800; align-items: center; gap: 4px">
             <!-- 感叹号图标 + 悬浮提示 -->
@@ -34,7 +34,7 @@
             type="primary"
             icon="el-icon-plus"
             class="action-btn"
-            @click="addMitsubishiTcpConfig"
+            @click="addMitsubishiMc3eTcpConfig"
             >添加配置</el-button
           >
           <el-button
@@ -52,13 +52,13 @@
       <div class="filter-bar">
         <el-form :inline="true" class="filter-form">
           <el-form-item label="标识">
-            <el-input v-model="mitsubishiTcpParams.code"></el-input>
+            <el-input v-model="mitsubishiMc3eTcpParams.code"></el-input>
           </el-form-item>
           <el-form-item>
             <el-button
               type="primary"
               icon="el-icon-search"
-              @click="getMitsubishiTcpConfigByDeviceSn()"
+              @click="getMitsubishiMc3eTcpConfigByDeviceSn()"
               class="search-btn"
               >查询
             </el-button>
@@ -66,17 +66,12 @@
         </el-form>
       </div>
       <el-table
-        :data="mitsubishiTcpList"
+        :data="mitsubishiMc3eTcpList"
         style="width: 100%"
         class="data-table"
         stripe
       >
         <el-table-column prop="code" label="标识" width="150" />
-        <el-table-column prop="protocolMode" label="协议类型" width="110">
-          <template slot-scope="scope">
-            {{ protocolModeName(scope.row.protocolMode) }}
-          </template>
-        </el-table-column>
         <el-table-column prop="areaCode" label="软元件" width="150">
           <template slot-scope="scope">
             {{ areaCodeName(scope.row.areaCode) }}
@@ -94,7 +89,7 @@
               type="primary"
               :loading="editLoading == scope.row.id"
               :disabled="editLoading == scope.row.id"
-              @click="editMitsubishiTcpConfig(scope.row)"
+              @click="editMitsubishiMc3eTcpConfig(scope.row)"
               class="table-action"
               >编辑
             </el-button>
@@ -113,12 +108,12 @@
       </el-table>
       <el-pagination
         class="pagination"
-        :current-page="mitsubishiTcpParams.pageNum"
-        :page-size="mitsubishiTcpParams.pageSize"
-        :total="mitsubishiTcpParams.total"
+        :current-page="mitsubishiMc3eTcpParams.pageNum"
+        :page-size="mitsubishiMc3eTcpParams.pageSize"
+        :total="mitsubishiMc3eTcpParams.total"
         layout="total, sizes, prev, pager, next, jumper"
-        @current-change="(pageNum) => { mitsubishiTcpParams.pageNum = pageNum; getMitsubishiTcpConfigByDeviceSn(); }"
-        @size-change="(size) => { mitsubishiTcpParams.pageSize = size; mitsubishiTcpParams.pageNum = 1; getMitsubishiTcpConfigByDeviceSn(); }"
+        @current-change="(pageNum) => { mitsubishiMc3eTcpParams.pageNum = pageNum; getMitsubishiMc3eTcpConfigByDeviceSn(); }"
+        @size-change="(size) => { mitsubishiMc3eTcpParams.pageSize = size; mitsubishiMc3eTcpParams.pageNum = 1; getMitsubishiMc3eTcpConfigByDeviceSn(); }"
       />
     </div>
     <el-drawer
@@ -132,38 +127,19 @@
       <div class="drawer-content">
         <!-- 添加或修改设备对话框 -->
         <el-form
-          ref="mitsubishiTcpForm"
-          :model="mitsubishiTcpForm"
+          ref="mitsubishiMc3eTcpForm"
+          :model="mitsubishiMc3eTcpForm"
           label-width="140px"
         >
           <el-form-item label="标识" prop="code" required>
             <el-input
-              v-model="mitsubishiTcpForm.code"
+              v-model="mitsubishiMc3eTcpForm.code"
               placeholder="请输入标识"
             />
           </el-form-item>
-          <el-form-item label="协议类型" prop="protocolMode" required>
-            <el-select
-              v-model="mitsubishiTcpForm.protocolMode"
-              placeholder="请选择协议帧类型"
-            >
-              <el-option label="MC3E (QnA兼容3E帧)" value="3E"></el-option>
-              <el-option label="MC1E (标准二进制帧)" value="1E"></el-option>
-            </el-select>
-            <div
-              style="
-                color: #999;
-                font-size: 12px;
-                line-height: 18px;
-                margin-top: 4px;
-              "
-            >
-              MC1E 为老式 PLC 标准二进制帧（端口 5007），协议细节待真机验证
-            </div>
-          </el-form-item>
           <el-form-item label="软元件" prop="areaCode" required>
             <el-select
-              v-model="mitsubishiTcpForm.areaCode"
+              v-model="mitsubishiMc3eTcpForm.areaCode"
               placeholder="请选择软元件类型"
             >
               <el-option label="D 数据寄存器" :value="0xA8" />
@@ -183,7 +159,7 @@
           </el-form-item>
           <el-form-item label="起始地址" prop="startAddress" required>
             <el-input
-              v-model="mitsubishiTcpForm.startAddress"
+              v-model="mitsubishiMc3eTcpForm.startAddress"
               type="number"
               placeholder="请输入起始地址"
             />
@@ -201,7 +177,7 @@
           </el-form-item>
           <el-form-item label="读取数量" prop="length" required>
             <el-input
-              v-model="mitsubishiTcpForm.length"
+              v-model="mitsubishiMc3eTcpForm.length"
               type="number"
               placeholder="字设备≤960，位设备≤2000"
             />
@@ -209,14 +185,14 @@
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
             <el-input
               type="number"
-              v-model="mitsubishiTcpForm.intervalTime"
+              v-model="mitsubishiMc3eTcpForm.intervalTime"
               placeholder="多久执行一次读取指令，如：10"
             />
           </el-form-item>
           <el-form-item label="读取后延迟(毫秒)" prop="delayTime" required>
             <el-input
               type="number"
-              v-model="mitsubishiTcpForm.delayTime"
+              v-model="mitsubishiMc3eTcpForm.delayTime"
               placeholder="同一个网络组件每次读取间隔，如：1000"
             />
           </el-form-item>
@@ -254,12 +230,12 @@ import {
   updateMitsubishiTcp,
   addMitsubishiTcp,
   getMitsubishiTcp,
-} from "@/api/business/mitsubishiTcp";
-import { readMitsubishiTcpSwitchByDevice } from "@/api/business/mitsubishiTcp";
-import { syncConfigToDevice } from "@/api/business/mitsubishiTcp";
+} from "@/api/business/mitsubishiMc3eTcp";
+import { readMitsubishiTcpSwitchByDevice } from "@/api/business/mitsubishiMc3eTcp";
+import { syncConfigToDevice } from "@/api/business/mitsubishiMc3eTcp";
 
 export default {
-  name: "MitsubishiTcpConfig",
+  name: "MitsubishiMc3eTcpConfig",
   props: {
     deviceSn: {
       type: String,
@@ -285,29 +261,29 @@ export default {
       deleteLoading: null,
       // 下发到设备按钮 loading（产品模式下可用）
       syncLoading: false,
-      mitsubishiTcpParams: {
+      mitsubishiMc3eTcpParams: {
         pageNum: 1,
         pageSize: 10,
         total: 0,
         belongSn: null,
         belongType: null,
       },
-      mitsubishiTcpIsEdit: false,
-      mitsubishiTcpForm: {},
-      mitsubishiTcpList: [],
+      mitsubishiMc3eTcpIsEdit: false,
+      mitsubishiMc3eTcpForm: {},
+      mitsubishiMc3eTcpList: [],
     };
   },
   computed: {
     // X/Y 软元件地址为八进制，提示用户
     isOctalArea() {
       return (
-        this.mitsubishiTcpForm.areaCode == 0x9c || this.mitsubishiTcpForm.areaCode == 0x9d
+        this.mitsubishiMc3eTcpForm.areaCode == 0x9c || this.mitsubishiMc3eTcpForm.areaCode == 0x9d
       );
     },
   },
   created() {
-    this.mitsubishiTcpParams.belongSn = this.deviceSn;
-    this.getMitsubishiTcpConfigByDeviceSn();
+    this.mitsubishiMc3eTcpParams.belongSn = this.deviceSn;
+    this.getMitsubishiMc3eTcpConfigByDeviceSn();
   },
   methods: {
     /** 产品模式：把该产品模板点位下发给其全部设备 */
@@ -324,13 +300,13 @@ export default {
         this.syncLoading = false;
       }
     },
-    async getMitsubishiTcpConfigByDeviceSn() {
-      this.mitsubishiTcpParams.belongSn = this.deviceSn;
+    async getMitsubishiMc3eTcpConfigByDeviceSn() {
+      this.mitsubishiMc3eTcpParams.belongSn = this.deviceSn;
       try {
-        const res = await listMitsubishiTcp(this.mitsubishiTcpParams);
+        const res = await listMitsubishiTcp(this.mitsubishiMc3eTcpParams);
         if (res?.code == 200) {
-          this.mitsubishiTcpList = res?.rows;
-          this.mitsubishiTcpParams.total = res?.total;
+          this.mitsubishiMc3eTcpList = res?.rows;
+          this.mitsubishiMc3eTcpParams.total = res?.total;
         }
       } catch (e) {
         console.error("查询三菱配置失败", e);
@@ -352,24 +328,24 @@ export default {
     },
     /** 提交按钮 */
     submitMitsubishiTcpForm() {
-      this.$refs["mitsubishiTcpForm"].validate((valid) => {
+      this.$refs["mitsubishiMc3eTcpForm"].validate((valid) => {
         if (valid) {
-          this.saveMitsubishiTcpConfig();
+          this.saveMitsubishiMc3eTcpConfig();
         }
       });
     },
-    async saveMitsubishiTcpConfig() {
+    async saveMitsubishiMc3eTcpConfig() {
       this.submitLoading = true;
       try {
-        if (this.mitsubishiTcpForm.id != null) {
-          await updateMitsubishiTcp(this.mitsubishiTcpForm);
+        if (this.mitsubishiMc3eTcpForm.id != null) {
+          await updateMitsubishiTcp(this.mitsubishiMc3eTcpForm);
           this.$modal.msgSuccess("修改成功");
         } else {
-          await addMitsubishiTcp(this.mitsubishiTcpForm);
+          await addMitsubishiTcp(this.mitsubishiMc3eTcpForm);
           this.$modal.msgSuccess("新增成功");
         }
         this.openAddMitsubishiTcp = false;
-        this.getMitsubishiTcpConfigByDeviceSn();
+        this.getMitsubishiMc3eTcpConfigByDeviceSn();
       } catch (e) {
         console.error("保存三菱配置失败", e);
       } finally {
@@ -398,56 +374,46 @@ export default {
     // 取消按钮
     closeMitsubishiTcp() {
       this.openAddMitsubishiTcp = false;
-      this.resetAddMitsubishiTcpConfig();
+      this.resetAddMitsubishiMc3eTcpConfig();
     },
-    resetAddMitsubishiTcpConfig() {
-      this.mitsubishiTcpForm = {
+    resetAddMitsubishiMc3eTcpConfig() {
+      this.mitsubishiMc3eTcpForm = {
         id: null,
         belongSn: null,
         belongType: null,
         code: null,
         createTime: null,
-        protocolMode: "3E",
         areaCode: null,
         startAddress: null,
         length: null,
         intervalTime: null,
         delayTime: null,
       };
-      this.resetForm("mitsubishiTcpForm");
-    },
-    // 协议帧模式代码转名称展示（null 默认 MC3E）
-    protocolModeName(mode) {
-      const modeMap = { "3E": "MC3E", "1E": "MC1E" };
-      if (mode == null || mode == "") {
-        return "MC3E";
-      }
-      return modeMap[mode] != null ? modeMap[mode] : mode;
+      this.resetForm("mitsubishiMc3eTcpForm");
     },
     resetForm(formName) {
       if (this.$refs[formName]) {
         this.$refs[formName].resetFields();
       }
     },
-    addMitsubishiTcpConfig() {
-      this.mitsubishiTcpIsEdit = false;
+    addMitsubishiMc3eTcpConfig() {
+      this.mitsubishiMc3eTcpIsEdit = false;
       this.openAddMitsubishiTcp = true;
-      this.resetAddMitsubishiTcpConfig();
-      this.mitsubishiTcpForm.belongSn = this.deviceSn;
-      this.mitsubishiTcpForm.belongType = "0";
-      this.mitsubishiTcpForm.intervalTime = 10;
-      this.mitsubishiTcpForm.delayTime = 100;
-      this.mitsubishiTcpForm.areaCode = 0xa8;
-      this.mitsubishiTcpForm.protocolMode = "3E";
+      this.resetAddMitsubishiMc3eTcpConfig();
+      this.mitsubishiMc3eTcpForm.belongSn = this.deviceSn;
+      this.mitsubishiMc3eTcpForm.belongType = "0";
+      this.mitsubishiMc3eTcpForm.intervalTime = 10;
+      this.mitsubishiMc3eTcpForm.delayTime = 100;
+      this.mitsubishiMc3eTcpForm.areaCode = 0xa8;
     },
-    async editMitsubishiTcpConfig(item) {
+    async editMitsubishiMc3eTcpConfig(item) {
       this.editLoading = item.id;
       try {
         const res = await getMitsubishiTcp(item.id);
         if (res?.code == 200) {
-          this.mitsubishiTcpIsEdit = true;
+          this.mitsubishiMc3eTcpIsEdit = true;
           this.openAddMitsubishiTcp = true;
-          this.mitsubishiTcpForm = res.data;
+          this.mitsubishiMc3eTcpForm = res.data;
         }
       } catch (e) {
         console.error("查询三菱配置失败", e);
@@ -473,7 +439,7 @@ export default {
         try {
           const res = await delMitsubishiTcp(id);
           if (res?.code == 200) {
-            await this.getMitsubishiTcpConfigByDeviceSn();
+            await this.getMitsubishiMc3eTcpConfigByDeviceSn();
             this.$message.success("删除成功");
           }
         } catch (e) {

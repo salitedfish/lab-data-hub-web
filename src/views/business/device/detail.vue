@@ -134,6 +134,13 @@
                   @click="saveThingModel"
                   >全部保存</el-button
                 >
+                <!-- 写值记录：所有协议共用同一个入口，不按 netType 分叉 -->
+                <el-button
+                  icon="el-icon-document"
+                  class="action-btn"
+                  @click="openWriteRecord"
+                  >写值记录</el-button
+                >
               </div>
             </div>
 
@@ -255,8 +262,18 @@
               </el-table-column>
 
               <!-- 操作列 -->
-              <el-table-column label="操作" width="200" fixed="right">
+              <el-table-column label="操作" width="280" fixed="right">
                 <template slot-scope="scope">
+                  <el-button
+                    size="mini"
+                    icon="el-icon-edit-outline"
+                    type="primary"
+                    class="table-action"
+                    :loading="writeLoading == scope.row.id"
+                    :disabled="writeLoading == scope.row.id"
+                    @click="openWriteDialog(scope.row)"
+                    >写值</el-button
+                  >
                   <el-button
                     size="mini"
                     icon="el-icon-delete"
@@ -319,11 +336,11 @@
           />
         </el-tab-pane>
         <el-tab-pane
-          label="Mitsubishi_TCP配置"
-          name="mitsubishiTcpConfig"
-          v-if="component?.netType == 'MITSUBISHI_TCP'"
+          label="Mitsubishi_MC3E_TCP配置"
+          name="mitsubishiMc3eTcpConfig"
+          v-if="component?.netType == 'MITSUBISHI_MC3E_TCP'"
         >
-          <MitsubishiTcpConfig
+          <MitsubishiMc3eTcpConfig
             :device-sn="device.deviceSn"
             :enabled="modbusEnabled"
           />
@@ -350,7 +367,9 @@
           />
         </el-tab-pane>
 
-        <el-tab-pane label="指令下发" name="functionConfig">
+        <!-- 指令下发体系已废弃（协议层 encode 从未真正调通），写能力改由「物模型」tab 的「写值」入口承担。
+             整个 tab 用 v-if="false" 隐藏而非删除：模板与逻辑保留，便于将来需要时还原。 -->
+        <el-tab-pane v-if="false" label="指令下发" name="functionConfig">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">指令下发配置</div>
@@ -450,7 +469,8 @@
           </el-dialog>
         </el-tab-pane>
 
-        <el-tab-pane label="指令测试" name="functionTest">
+        <!-- 指令测试：随「指令下发」一并隐藏（见上） -->
+        <el-tab-pane v-if="false" label="指令测试" name="functionTest">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">指令下发测试</div>
@@ -518,7 +538,8 @@
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="指令下发记录" name="functionRecord">
+        <!-- 指令下发记录：随「指令下发」一并隐藏（见上） -->
+        <el-tab-pane v-if="false" label="指令下发记录" name="functionRecord">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">指令下发记录</div>
@@ -1268,6 +1289,233 @@
         >
       </div>
     </el-dialog>
+
+    <!-- 写值弹窗（物模型列表「写值」按钮） -->
+    <el-dialog
+      :title="'写值 - ' + (writeRow.name || writeRow.identifier || '')"
+      :visible.sync="writeDialogVisible"
+      width="480px"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <!-- 只读信息：让用户确认写的是哪个点位 -->
+      <div class="write-info">
+        <div class="write-info-row">
+          <span class="write-info-label">属性名称</span>
+          <span class="write-info-value">{{ writeRow.name || "--" }}</span>
+        </div>
+        <div class="write-info-row">
+          <span class="write-info-label">标识符</span>
+          <span class="write-info-value">{{ writeRow.identifier || "--" }}</span>
+        </div>
+        <div class="write-info-row">
+          <span class="write-info-label">数据类型</span>
+          <span class="write-info-value">{{ writeRow.dataType || "--" }}</span>
+        </div>
+        <div class="write-info-row">
+          <span class="write-info-label">单位</span>
+          <span class="write-info-value">{{ writeRow.unit || "--" }}</span>
+        </div>
+        <div class="write-info-row">
+          <span class="write-info-label">缩放</span>
+          <span class="write-info-value">{{ writeRow.scale }}</span>
+        </div>
+        <div class="write-info-row">
+          <span class="write-info-label">换算偏移</span>
+          <span class="write-info-value">{{ writeRow.offset }}</span>
+        </div>
+      </div>
+
+      <!-- 写入值：按数据类型分派输入控件 -->
+      <div class="write-input">
+        <span class="write-info-label">写入值</span>
+        <el-input-number
+          v-if="writeInputType == 'number'"
+          v-model="writeValue"
+          size="small"
+          controls-position="right"
+          class="write-input-ctrl"
+        />
+        <el-switch
+          v-else-if="writeInputType == 'bool'"
+          v-model="writeValue"
+          class="write-input-ctrl"
+        />
+        <el-input
+          v-else
+          v-model="writeValue"
+          size="small"
+          placeholder="请输入要写入的值"
+          class="write-input-ctrl"
+        />
+      </div>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button :disabled="submitLoading" @click="writeDialogVisible = false"
+          >取消</el-button
+        >
+        <el-button
+          type="primary"
+          :loading="submitLoading"
+          :disabled="submitLoading"
+          @click="submitWrite"
+          >确定</el-button
+        >
+      </div>
+    </el-dialog>
+
+    <!-- 写值记录弹窗（物模型「写值记录」按钮）—— 与「历史数据」弹窗同构，协议无关 -->
+    <el-dialog
+      title="写值记录"
+      :visible.sync="writeRecordDialogVisible"
+      width="90%"
+      top="5vh"
+      append-to-body
+      class="write-record-dialog"
+    >
+      <div class="dialog-content">
+        <!-- 筛选条件 -->
+        <div class="filter-bar">
+          <el-form :inline="true" class="filter-form">
+            <el-form-item label="属性名称">
+              <el-select
+                v-model="writeRecordParams.code"
+                placeholder="选择属性"
+                clearable
+                class="filter-select"
+              >
+                <el-option
+                  v-for="property in realTimeProperties"
+                  :key="property.id"
+                  :label="property.name"
+                  :value="property.identifier"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="来源">
+              <el-select
+                v-model="writeRecordParams.source"
+                placeholder="全部"
+                clearable
+                class="filter-select"
+              >
+                <el-option label="接口写入" value="api" />
+                <el-option label="手动写值" value="manual" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="结果">
+              <el-select
+                v-model="writeRecordParams.isSuccess"
+                placeholder="全部"
+                clearable
+                class="filter-select"
+              >
+                <el-option label="成功" value="1" />
+                <el-option label="失败" value="0" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="时间范围">
+              <el-date-picker
+                v-model="writeRecordParams.rangeDate"
+                type="datetimerange"
+                range-separator="至"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                value-format="yyyy-MM-dd HH:mm:ss"
+                class="filter-date"
+                style="width: 360px"
+              />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button
+                type="primary"
+                icon="el-icon-search"
+                @click="loadWriteRecordData"
+                class="search-btn"
+              >
+                查询
+              </el-button>
+              <el-button
+                icon="el-icon-refresh"
+                @click="resetWriteRecordSearch"
+                class="reset-btn"
+              >
+                重置
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 数据表格 -->
+        <el-table
+          :data="writeRecordData"
+          style="width: 100%"
+          class="data-table"
+          stripe
+          v-loading="writeRecordLoading"
+          max-height="500"
+        >
+          <!-- 序号：与 gen/index.vue 一致用 type="index"（按当前页从 1 起） -->
+          <el-table-column label="序号" type="index" width="50" align="center" />
+          <!-- 下面四列用 min-width 而非 width：全列写死宽度时列宽之和小于表格宽度，
+               右侧会空出一条 —— 给弹性列 min-width，余量由 el-table 自己分配，表格占满弹窗 -->
+          <el-table-column prop="deviceName" label="设备" min-width="160" show-overflow-tooltip>
+            <template slot-scope="scope">
+              {{ scope.row.deviceName || scope.row.deviceSn || "--" }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="pointName" label="点位名称" min-width="160" show-overflow-tooltip>
+            <template slot-scope="scope">
+              {{ getWriteRecordPointName(scope.row) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="code" label="标识符" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="rawValue" label="写入值" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="source" label="来源" width="110">
+            <template slot-scope="scope">
+              <el-tag :type="getWriteSourceTagType(scope.row.source)" effect="light">
+                {{ getWriteSourceText(scope.row.source) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="isSuccess" label="结果" width="110">
+            <template slot-scope="scope">
+              <!-- 失败时把错误码和原因挂在标签上，鼠标移上去才看，不占列宽 -->
+              <el-tooltip
+                v-if="scope.row.isSuccess != '1'"
+                :content="getWriteFailReason(scope.row)"
+                placement="top"
+              >
+                <el-tag :type="getWriteResultTagType(scope.row.isSuccess)" effect="light">
+                  {{ getWriteResultText(scope.row.isSuccess) }}
+                </el-tag>
+              </el-tooltip>
+              <el-tag
+                v-else
+                :type="getWriteResultTagType(scope.row.isSuccess)"
+                effect="light"
+              >
+                {{ getWriteResultText(scope.row.isSuccess) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="时间" width="160" />
+        </el-table>
+
+        <!-- 分页 -->
+        <el-pagination
+          class="pagination"
+          :current-page="writeRecordPagination.current"
+          :page-size="writeRecordPagination.size"
+          :total="writeRecordPagination.total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleWriteRecordSizeChange"
+          @current-change="handleWriteRecordPageChange"
+        />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -1284,6 +1532,7 @@ import {
   getDevice,
   updateDevice,
   updateDeviceSlaveId,
+  writePointValue,
 } from "@/api/business/device";
 import { formatDateTime } from "@/utils/date";
 import {
@@ -1302,6 +1551,7 @@ import {
 } from "@/api/business/warnConfig";
 import { listWarnRecord, dealWarmRecord } from "@/api/business/warnRecord";
 import { listDeviceLogs } from "@/api/business/deviceLogs";
+import { listPointWriteRecord } from "@/api/business/pointWriteRecord";
 import { createWebSocket } from "@/utils/websocket";
 import {
   listFunction,
@@ -1323,7 +1573,7 @@ import OmronFinsTcpConfig from "@/components/OmronFinsTcpConfig";
 import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
 import BrotherTcpConfig from "@/components/BrotherTcpConfig";
 import FanucTcpConfig from "@/components/FanucTcpConfig";
-import MitsubishiTcpConfig from "@/components/MitsubishiTcpConfig";
+import MitsubishiMc3eTcpConfig from "@/components/MitsubishiMc3eTcpConfig";
 import MitsubishiCncTcpConfig from "@/components/MitsubishiCncTcpConfig";
 
 export default {
@@ -1335,7 +1585,7 @@ export default {
     DatabaseTcpConfig,
     BrotherTcpConfig,
     FanucTcpConfig,
-    MitsubishiTcpConfig,
+    MitsubishiMc3eTcpConfig,
     MitsubishiCncTcpConfig,
   },
   created() {
@@ -1347,6 +1597,18 @@ export default {
     }
   },
   computed: {
+    // 写值输入控件类型：按物模型 dataType 分派（int/float/double 数字、bool 开关、其余文本框）
+    // 只决定「用哪个控件」，不做值范围/可写性校验——那两层在后端（方案 4.7.4）
+    writeInputType() {
+      const dataType = this.writeRow ? this.writeRow.dataType : "";
+      if (dataType == "int" || dataType == "float" || dataType == "double") {
+        return "number";
+      }
+      if (dataType == "bool") {
+        return "bool";
+      }
+      return "text";
+    },
     isJsonFormat() {
       if (!this.selectedCommand.functionParams) return false;
 
@@ -1515,6 +1777,25 @@ export default {
       component: {},
       isEditingSlaveId: false, // 控制从站ID编辑状态
       tempSlaveId: "", // 暂存编辑的从站ID（避免直接修改原数据）
+
+      // ===== 写值弹窗 =====
+      writeDialogVisible: false, // 写值弹窗显隐
+      writeRow: {}, // 当前写值的那一行物模型属性
+      writeValue: null, // 用户输入的写入值
+      submitLoading: false, // 弹窗「确定」按钮的 loading（同时控 disabled）
+      writeLoading: null, // 正在提交写值的行 id（每行独立，不是布尔值）
+      thingModelSnapshot: {}, // 已保存的 identifier/dataType 快照，key = 行 id
+
+      // ===== 写值记录弹窗 =====
+      writeRecordDialogVisible: false, // 写值记录弹窗显隐
+      writeRecordData: [], // 写值记录列表
+      writeRecordLoading: false, // 列表 loading
+      writeRecordParams: {}, // 查询参数（deviceSn/code/source/isSuccess/rangeDate 等）
+      writeRecordPagination: {
+        current: 1,
+        size: 10,
+        total: 0,
+      },
     };
   },
   methods: {
@@ -1534,13 +1815,33 @@ export default {
         this.component = res?.data;
       });
     },
-    getPropertyList() {
+    async getPropertyList() {
       this.propertyParams.belongSn = this.device.deviceSn;
-      listProperties(this.propertyParams).then((res) => {
+      try {
+        const res = await listProperties(this.propertyParams);
         this.thingModelData = res.rows;
         this.realTimeProperties = res.rows;
+        // 记一份 identifier/dataType 快照：这两个字段是行内可直接编辑的输入框，
+        // 写值前要用它拦住「改了没保存就写值」（方案 4.7.5）
+        this.buildThingModelSnapshot();
         this.getDeviceLastData();
+      } catch (error) {
+        console.error("查询物模型失败:", error);
+      }
+    },
+
+    // 物模型快照：只记写值匹配链真正会用到的两个字段
+    buildThingModelSnapshot() {
+      const snapshot = {};
+      this.thingModelData.forEach((item) => {
+        if (item.id != null) {
+          snapshot[item.id] = {
+            identifier: item.identifier,
+            dataType: item.dataType,
+          };
+        }
       });
+      this.thingModelSnapshot = snapshot;
     },
 
     getLevelType(level) {
@@ -1804,10 +2105,9 @@ export default {
     },
 
     // 保存物模型
-    saveThingModel() {
+    async saveThingModel() {
       //校验数据完整性
-      for (let i = 0; i < this.thingModelData.length; i++) {
-        let current = this.thingModelData[i];
+      for (let current of this.thingModelData) {
         if (!current.identifier || !current.name || !current.dataType) {
           this.$message.error("请将信息填写完整再提交");
           return;
@@ -1819,10 +2119,14 @@ export default {
         propertyList: this.thingModelData,
         fromType: "0",
       };
-      saveBatch(data).then((response) => {
+      try {
+        await saveBatch(data);
         this.$modal.msgSuccess("新增成功");
-        this.getPropertyList();
-      });
+        // 必须等重新拉取完：快照要记库里的值，不能用提交前输入框里的值
+        await this.getPropertyList();
+      } catch (error) {
+        console.error("保存物模型失败:", error);
+      }
     },
 
     // 取消编辑
@@ -1988,6 +2292,174 @@ export default {
         this.thingModelData.splice(index, 1);
         this.$message.success("删除成功");
       });
+    },
+
+    // 打开写值弹窗
+    openWriteDialog(row) {
+      // 行内的标识符/数据类型是可直接编辑的输入框，改完没点「全部保存」就写值的话，
+      // 前端会把输入框里的新值发出去，而后端匹配链查的是库里的旧值 → 404 或类型对不上。
+      // 用保存时的快照先拦一道，免得用户拿到一个看不懂的报错（方案 4.7.5）
+      const snapshot = row.id == null ? null : this.thingModelSnapshot[row.id];
+      if (
+        !snapshot ||
+        snapshot.identifier != row.identifier ||
+        snapshot.dataType != row.dataType
+      ) {
+        this.$message.warning("请先保存物模型再写值");
+        return;
+      }
+      this.writeRow = row;
+      // 数字给 undefined（输入框空着等用户填）、布尔给 false、字符串给空串。
+      // ⚠️ 数字这里**只能给 undefined，不能给 null**：el-input-number 收到 null 会
+      // `Number(null)` 归一成 0，弹窗一打开 writeValue 就是 0、输入框显示 "0" ——
+      // 后果有两个：① 用户不开输入直接点「确定」，0 就被静默写进 PLC；
+      // ② 用户敲进非法内容（如 "abc"）时 el-input-number 在失焦时回退到 currentValue，
+      // 看着输入框里是 abc，实际提交的还是 0，且全程没有任何提示。
+      // Element 的 value 观察器对 undefined 短路（不 Number()），才能留住「没填」这个状态，
+      // 由 submitWrite 的非空校验拦下（2026-09-19 页面实测发现）
+      if (this.writeInputType == "bool") {
+        this.writeValue = false;
+      } else if (this.writeInputType == "number") {
+        this.writeValue = undefined;
+      } else {
+        this.writeValue = "";
+      }
+      this.writeDialogVisible = true;
+    },
+
+    // 提交写值
+    async submitWrite() {
+      const row = this.writeRow;
+      // 布尔没有「空」的概念：false 是合法值，不参与非空校验。
+      // 也不能用 == "" 判空——JS 里 0 == "" 为 true，会把合法的数字 0 拦下
+      // （与 FANUC count 点位 param1=0 被误判为空是同一个坑）
+      const isEmpty =
+        this.writeValue === null ||
+        this.writeValue === undefined ||
+        this.writeValue === "";
+      if (this.writeInputType != "bool" && isEmpty) {
+        this.$message.warning("请输入要写入的值");
+        return;
+      }
+      this.submitLoading = true;
+      this.writeLoading = row.id;
+      try {
+        const res = await writePointValue({
+          deviceSn: this.device.deviceSn,
+          code: row.identifier,
+          value: this.writeValue,
+        });
+        // 只说「写入成功」，不说「已生效」：写成功只代表设备接受了请求，
+        // 页面上的数字来自读链路，要等下一次轮询才更新（方案 4.7.5）
+        this.$modal.msgSuccess(res.msg || "写入成功");
+        this.writeDialogVisible = false;
+        this.getDeviceLastData();
+      } catch (error) {
+        // 失败不关弹窗：写值失败大多要改值重试，关掉让用户重新点开是白费一步。
+        // 错误提示由 request.js 响应拦截器统一弹出（400/404/409/422/503/504）
+        console.error("写值失败:", error);
+      } finally {
+        this.submitLoading = false;
+        this.writeLoading = null;
+      }
+    },
+
+    // 打开写值记录弹窗
+    openWriteRecord() {
+      this.writeRecordDialogVisible = true;
+      this.writeRecordPagination.current = 1;
+      // 默认开始和结束时间为当天 0 点到当天 23 点（与历史数据弹窗一致）
+      const startTime = formatDateTime(new Date().setHours(0, 0, 0, 0));
+      const endTime = formatDateTime(new Date().setHours(23, 59, 59, 999));
+      this.writeRecordParams = { rangeDate: [startTime, endTime] };
+      this.loadWriteRecordData();
+    },
+    // 查询写值记录
+    async loadWriteRecordData() {
+      this.writeRecordLoading = true;
+      try {
+        const params = {
+          ...this.writeRecordParams,
+          deviceSn: this.device.deviceSn,
+          pageNum: this.writeRecordPagination.current,
+          pageSize: this.writeRecordPagination.size,
+        };
+        // 将 rangeDate 数组转换为 startTime 和 endTime
+        if (params.rangeDate && params.rangeDate.length == 2) {
+          params.startTime = params.rangeDate[0];
+          params.endTime = params.rangeDate[1];
+        }
+        const res = await listPointWriteRecord(params);
+        this.writeRecordPagination.total = res.total;
+        this.writeRecordData = res.rows;
+      } catch (error) {
+        console.error("查询写值记录失败:", error);
+      } finally {
+        this.writeRecordLoading = false;
+      }
+    },
+    // 重置写值记录搜索条件
+    resetWriteRecordSearch() {
+      this.writeRecordPagination.current = 1;
+      this.writeRecordParams = {};
+      this.loadWriteRecordData();
+    },
+    // 写值记录翻页
+    handleWriteRecordPageChange(page) {
+      this.writeRecordPagination.current = page;
+      this.loadWriteRecordData();
+    },
+    // 改每页条数：回到第一页再查，否则可能停在超出范围的空页
+    handleWriteRecordSizeChange(size) {
+      this.writeRecordPagination.size = size;
+      this.writeRecordPagination.current = 1;
+      this.loadWriteRecordData();
+    },
+    // 点位名称：优先用记录里冗余的协议点位名（审计快照，不随后续改名而变），
+    // 协议点位表没有语义名的（MODBUS 这类手动地址协议 name 为空）回退到物模型显示名，
+    // 再回退到标识符——与同页「历史数据」弹窗 identifier → 物模型名的口径一致
+    getWriteRecordPointName(row) {
+      if (row.pointName) {
+        return row.pointName;
+      }
+      const model = this.thingModelData.find((p) => p.identifier == row.code);
+      if (model && model.name) {
+        return model.name;
+      }
+      return row.code || "--";
+    },
+    // 写入来源文本：api-接口写入 manual-页面手动写值（后端 PointWriteSource 常量）
+    getWriteSourceText(source) {
+      if (source == "api") {
+        return "接口写入";
+      }
+      if (source == "manual") {
+        return "手动写值";
+      }
+      return source || "--";
+    },
+    // 写入来源标签颜色
+    getWriteSourceTagType(source) {
+      return source == "api" ? "warning" : "";
+    },
+    // 写入结果文本：1-成功 0-失败
+    getWriteResultText(isSuccess) {
+      return isSuccess == "1" ? "成功" : "失败";
+    },
+    // 写入结果标签颜色
+    getWriteResultTagType(isSuccess) {
+      return isSuccess == "1" ? "success" : "danger";
+    },
+    // 失败原因（错误码 + 后端 msg），挂在「失败」标签的 tooltip 上
+    getWriteFailReason(row) {
+      const parts = [];
+      if (row.errorCode) {
+        parts.push("错误码：" + row.errorCode);
+      }
+      if (row.errorMsg) {
+        parts.push(row.errorMsg);
+      }
+      return parts.length ? parts.join("，") : "无失败原因";
     },
 
     saveDeviceAccessConfig() {
@@ -2664,6 +3136,43 @@ export default {
     max-height: 70vh;
     overflow: auto;
   }
+}
+
+/* 写值弹窗 */
+.write-info {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: #fafafa;
+  margin-bottom: 16px;
+}
+
+.write-info-row {
+  display: flex;
+  align-items: center;
+  line-height: 26px;
+}
+
+.write-info-label {
+  width: 72px;
+  flex: none;
+  font-size: 13px;
+  color: #909399;
+}
+
+.write-info-value {
+  font-size: 13px;
+  color: #303133;
+  word-break: break-all;
+}
+
+.write-input {
+  display: flex;
+  align-items: center;
+}
+
+.write-input-ctrl {
+  flex: 1;
 }
 
 .custom-json-viewer {

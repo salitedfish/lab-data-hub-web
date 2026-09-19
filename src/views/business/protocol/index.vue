@@ -184,8 +184,8 @@
                 value="FANUC_TCP"
               ></el-option>
               <el-option
-                label="MITSUBISHI_TCP"
-                value="MITSUBISHI_TCP"
+                label="MITSUBISHI_MC3E_TCP"
+                value="MITSUBISHI_MC3E_TCP"
               ></el-option>
               <el-option
                 label="MITSUBISHI_CNC_TCP"
