@@ -77,7 +77,12 @@
             {{ areaCodeName(scope.row.areaCode) }}
           </template>
         </el-table-column>
-        <el-table-column prop="startAddress" label="起始地址" width="180" />
+        <el-table-column prop="startAddress" label="起始地址" width="120" />
+        <el-table-column prop="bitAddress" label="位号" width="80">
+          <template slot-scope="scope">
+            {{ scope.row.bitAddress == null ? "—" : scope.row.bitAddress }}
+          </template>
+        </el-table-column>
         <el-table-column prop="length" label="读取数量" width="180" />
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="180" />
         <el-table-column prop="delayTime" label="读取后延迟(ms)" width="180" />
@@ -141,28 +146,46 @@
             <el-select
               v-model="omronFinsTcpForm.areaCode"
               placeholder="DM区"
+              @change="handleAreaCodeChange"
             >
-              <el-option label="DM区" :value="0x82" />
-              <el-option label="CIO区" :value="0x30" />
-              <el-option label="WR区" :value="0xB1" />
-              <el-option label="H区" :value="0x32" />
-              <el-option label="IR区" :value="0x88" />
-              <el-option label="LR区" :value="0x98" />
-              <el-option label="EM区" :value="0xA0" />
+              <el-option-group
+                v-for="group in areaOptions"
+                :key="group.label"
+                :label="group.label"
+              >
+                <el-option
+                  v-for="item in group.items"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-option-group>
             </el-select>
           </el-form-item>
           <el-form-item label="起始地址" prop="startAddress" required>
             <el-input
               v-model="omronFinsTcpForm.startAddress"
               type="number"
-              placeholder="请输入起始地址"
+              placeholder="起始字地址（0-65535）"
+            />
+          </el-form-item>
+          <el-form-item
+            v-if="isBitAreaSelected"
+            label="位号"
+            prop="bitAddress"
+            required
+          >
+            <el-input
+              v-model="omronFinsTcpForm.bitAddress"
+              type="number"
+              placeholder="位号 0-15（位区必填，是地址的第 3 字节）"
             />
           </el-form-item>
           <el-form-item label="读取数量" prop="length" required>
             <el-input
               v-model="omronFinsTcpForm.length"
               type="number"
-              placeholder="请输入读取数量"
+              placeholder="字区=字个数(1-1000)，位区=位个数(恒为1)"
             />
           </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
@@ -217,6 +240,41 @@ import {
 import { readOmronFinsTcpSwitchByDevice } from "@/api/business/omronFins";
 import { syncConfigToDevice } from "@/api/business/omronFins";
 
+// ============ FINS 标准内存区码（W342 内存区指定表） ============
+// 字区码与位区码成对出现，区码决定地址第 3 字节是「位号」还是恒为 0：
+//   区           字访问   位访问
+//   CIO         0xB0    0x30
+//   WR          0xB1    0x31
+//   HR(H)       0xB2    0x32
+//   AR(A)       0xB3    0x33
+//   DM          0x82    0x02
+//   EM 当前库    0x98    0x18
+//   EM 库 0-15   0xA0-AF 0x20-2F
+// ⚠️ 旧的「IR区 0x88」「H区 0x32」是错的：0x88 实为 CNT 计数器区（CS/CJ 没有 IR 区），
+//    0x32 是 HR 的位码。区码填错设备不报错、只会静默读到另一个区，所以这里按标准卡死，
+//    与后端 FinsDataReader.BIT_AREA_CODES / LabdatahubOmronFinsConfigController#checkConfig 保持一致。
+const WORD_AREA_ITEMS = [
+  { label: "CIO区", value: 0xb0 },
+  { label: "WR区", value: 0xb1 },
+  { label: "H区(HR)", value: 0xb2 },
+  { label: "A区(AR)", value: 0xb3 },
+  { label: "DM区", value: 0x82 },
+  { label: "EM当前库", value: 0x98 },
+];
+const BIT_AREA_ITEMS = [
+  { label: "CIO位", value: 0x30 },
+  { label: "WR位", value: 0x31 },
+  { label: "H位(HR)", value: 0x32 },
+  { label: "A位(AR)", value: 0x33 },
+  { label: "DM位", value: 0x02 },
+  { label: "EM当前库位", value: 0x18 },
+];
+// EM 库 0-15 逐库展开（字区 0xA0-0xAF、位区 0x20-0x2F），手写 32 行没必要
+for (let bank = 0; bank < 16; bank++) {
+  WORD_AREA_ITEMS.push({ label: "EM库" + bank, value: 0xa0 + bank });
+  BIT_AREA_ITEMS.push({ label: "EM库" + bank + "位", value: 0x20 + bank });
+}
+
 export default {
   name: "OmronFinsTcpConfig",
   props: {
@@ -255,6 +313,28 @@ export default {
       omronFinsTcpForm: {},
       omronFinsTcpList: [],
     };
+  },
+  computed: {
+    // 存储区下拉的两组选项。下拉与列表列名共用同一份数据，避免两处各写一份映射后对不上
+    areaOptions() {
+      return [
+        { label: "字区（按字读写）", items: WORD_AREA_ITEMS },
+        { label: "位区（按位读写）", items: BIT_AREA_ITEMS },
+      ];
+    },
+    // 区码 → 区名（列表「存储区」列展示用）
+    areaNameMap() {
+      const map = {};
+      for (const item of WORD_AREA_ITEMS.concat(BIT_AREA_ITEMS)) {
+        map[item.value] = item.label;
+      }
+      return map;
+    },
+    // 当前选中的是否位区：决定是否显示「位号」输入框
+    isBitAreaSelected() {
+      const code = this.omronFinsTcpForm.areaCode;
+      return BIT_AREA_ITEMS.some((item) => item.value == code);
+    },
   },
   created() {
     this.omronFinsTcpParams.belongSn = this.deviceSn;
@@ -303,6 +383,9 @@ export default {
     },
     /** 提交按钮 */
     submitOmronFinsTcpForm() {
+      if (!this.checkOmronFinsTcpForm()) {
+        return;
+      }
       this.$refs["omronFinsTcpForm"].validate((valid) => {
         if (valid) {
           this.saveOmronFinsTcpConfig();
@@ -329,16 +412,54 @@ export default {
     },
     // 存储区代码转名称展示
     areaCodeName(code) {
-      const areaMap = {
-        130: "DM区",
-        48: "CIO区",
-        177: "WR区",
-        50: "H区",
-        136: "IR区",
-        152: "LR区",
-        160: "EM区",
-      };
-      return areaMap[code] != null ? areaMap[code] : code;
+      return this.areaNameMap[code] != null ? this.areaNameMap[code] : code;
+    },
+    // 切换存储区：字区/位区与位号必须自洽，否则后端会拒（配错了不是报错而是读写到别处去）
+    handleAreaCodeChange(areaCode) {
+      const isBit = BIT_AREA_ITEMS.some((item) => item.value == areaCode);
+      if (isBit) {
+        this.omronFinsTcpForm.bitAddress = null;
+        // 位区一次只能读写 1 个位，顺手带上，省得用户填了 8 再被拒
+        this.omronFinsTcpForm.length = 1;
+      } else {
+        // 字区不能带位号，残留位号会让后端报「字区不应填写位号」
+        this.omronFinsTcpForm.bitAddress = null;
+      }
+    },
+    /** 提交前的一致性校验：拦住后端一定会拒的组合，提示比后端的中文错误更早更准 */
+    checkOmronFinsTcpForm() {
+      const form = this.omronFinsTcpForm;
+      if (form.areaCode == null) {
+        this.$message.error("请选择存储区");
+        return false;
+      }
+      if (this.isBitAreaSelected) {
+        if (form.bitAddress == null || form.bitAddress === "") {
+          this.$message.error("位区必须填写位号（0-15）");
+          return false;
+        }
+        if (Number(form.bitAddress) < 0 || Number(form.bitAddress) > 15) {
+          this.$message.error("位号必须在 0-15 之间");
+          return false;
+        }
+        if (form.length != 1) {
+          this.$message.error("位区一次只读 1 个位，读取数量必须为 1");
+          return false;
+        }
+      } else if (form.length < 1 || form.length > 1000) {
+        this.$message.error("读取数量必须在 1-1000 之间");
+        return false;
+      }
+      if (
+        form.startAddress == null ||
+        form.startAddress === "" ||
+        Number(form.startAddress) < 0 ||
+        Number(form.startAddress) > 65535
+      ) {
+        this.$message.error("起始字地址必须在 0-65535 之间");
+        return false;
+      }
+      return true;
     },
     // 取消按钮
     closeOmronFinsTcp() {
@@ -354,6 +475,7 @@ export default {
         createTime: null,
         areaCode: null,
         startAddress: null,
+        bitAddress: null,
         length: null,
         intervalTime: null,
         delayTime: null,
