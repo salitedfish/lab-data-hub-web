@@ -260,10 +260,10 @@
             <li class="note-item">2、设备类型会从产品直接继承，并且不可更改。</li>
             <li class="note-item">3、物模型属性默认从产品直接继承，但设备可以自己添加独有属性，切记产品同步物模型时会覆盖设备独有属性。</li>
             <li class="note-item">4、告警配置规则默认从产品直接继承，但设备可以自己添加独有规则，切记产品同步告警规则时会覆盖设备独有告警规则。</li>
-            <li class="note-item">5、指令下发配置默认从产品直接继承，但设备可以自己添加独有指令，切记产品同步指令下发时会覆盖设备独有指令。</li>
+            <!-- 原「5、指令下发配置默认从产品直接继承…」已随指令下发功能一并隐藏，后续条目顺延编号 -->
             <li class="note-item">
               <div class="device-type-item">
-                <span class="item-number">6、设备类型：</span>
+                <span class="item-number">5、设备类型：</span>
                 <div class="device-type-details">
                   <div class="type-option">
                     <span class="type-name">直连设备：</span>

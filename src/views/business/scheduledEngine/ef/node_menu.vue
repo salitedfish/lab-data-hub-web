@@ -56,23 +56,25 @@ export default {
             }
           ]
         },
-        {
-          id: '3',
-          type: 'group',
-          name: '执行动作',
-          ico: 'el-icon-position',
-          open: true,
-          children: [
-            {
-              id: '31',
-              type: 'function',
-              name: '指令下发',
-              ico: 'el-icon-shopping-cart-full',
-              // 自定义覆盖样式
-              style: {}
-            }
-          ]
-        }
+        // 指令下发体系已废弃，写能力改由设备详情页「物模型」tab 的「写值」入口承担。
+        // 该分组下原本只有「指令下发」一个节点，整组一并隐藏避免留空分组头；需要时取消注释即可还原。
+        // {
+        //   id: '3',
+        //   type: 'group',
+        //   name: '执行动作',
+        //   ico: 'el-icon-position',
+        //   open: true,
+        //   children: [
+        //     {
+        //       id: '31',
+        //       type: 'function',
+        //       name: '指令下发',
+        //       ico: 'el-icon-shopping-cart-full',
+        //       // 自定义覆盖样式
+        //       style: {}
+        //     }
+        //   ]
+        // }
       ],
       nodeMenu: {}
     }
