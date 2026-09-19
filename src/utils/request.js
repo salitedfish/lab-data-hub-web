@@ -81,8 +81,11 @@ service.interceptors.request.use(config => {
 service.interceptors.response.use(res => {
     // 未设置状态码则默认成功状态
     const code = res.data.code || 200
-    // 获取错误信息
-    const msg = errorCode[code] || res.data.msg || errorCode['default']
+    // 获取错误信息：后端自己给的 msg 优先于本地码表。
+    // 本地码表只有 401/403/404，其中 404 是「HTTP 路径不存在」的语义；
+    // 业务码也用 404（如写值时的「设备不存在 / 点位未配置」）时，
+    // 压过后端 msg 会把具体原因换成笼统的「访问资源不存在」，反而看不见问题所在。
+    const msg = res.data.msg || errorCode[code] || errorCode['default']
     // 二进制数据则直接返回
     if (res.request.responseType ===  'blob' || res.request.responseType ===  'arraybuffer') {
       return res.data

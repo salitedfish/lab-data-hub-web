@@ -378,11 +378,11 @@
           />
         </el-tab-pane>
         <el-tab-pane
-          label="Mitsubishi_TCP配置"
-          name="mitsubishiTcpConfig"
-          v-if="component?.netType == 'MITSUBISHI_TCP'"
+          label="Mitsubishi_MC3E_TCP配置"
+          name="mitsubishiMc3eTcpConfig"
+          v-if="component?.netType == 'MITSUBISHI_MC3E_TCP'"
         >
-          <MitsubishiTcpConfig
+          <MitsubishiMc3eTcpConfig
             :device-sn="product.productSn"
             :isProductIn="true"
           />
@@ -409,7 +409,9 @@
             :initial-database-tcp-enabled="true"
           />
         </el-tab-pane>
-        <el-tab-pane label="指令下发" name="functionConfig">
+        <!-- 指令下发体系已废弃，写能力改由设备详情页「物模型」tab 的「写值」入口承担。
+             整个 tab 用 v-if="false" 隐藏而非删除：模板与逻辑保留，便于将来需要时还原。 -->
+        <el-tab-pane v-if="false" label="指令下发" name="functionConfig">
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">指令下发配置</div>
@@ -976,9 +978,8 @@
             <li class="note-item">
               4、告警配置规则默认从产品直接继承，但设备可以自己添加独有规则，切记产品同步告警规则时会覆盖设备独有告警规则。
             </li>
-            <li class="note-item">
-              5、指令下发配置默认从产品直接继承，但设备可以自己添加独有指令，切记产品同步指令下发时会覆盖设备独有指令。
-            </li>
+            <!-- 原「5、指令下发配置默认从产品直接继承…」已随指令下发功能一并隐藏；
+                 下面「设备类型」原误编为 5（与指令下发重号），顺延后编号自洽 -->
             <li class="note-item">
               <div class="device-type-item">
                 <span class="item-number">5、设备类型：</span>
@@ -1083,7 +1084,7 @@ import OmronFinsTcpConfig from "@/components/OmronFinsTcpConfig";
 import DatabaseTcpConfig from "@/components/DatabaseTcpConfig";
 import BrotherTcpConfig from "@/components/BrotherTcpConfig";
 import FanucTcpConfig from "@/components/FanucTcpConfig";
-import MitsubishiTcpConfig from "@/components/MitsubishiTcpConfig";
+import MitsubishiMc3eTcpConfig from "@/components/MitsubishiMc3eTcpConfig";
 import MitsubishiCncTcpConfig from "@/components/MitsubishiCncTcpConfig";
 
 export default {
@@ -1096,7 +1097,7 @@ export default {
     DatabaseTcpConfig,
     BrotherTcpConfig,
     FanucTcpConfig,
-    MitsubishiTcpConfig,
+    MitsubishiMc3eTcpConfig,
     MitsubishiCncTcpConfig,
   },
   created() {

@@ -85,3 +85,13 @@ export function getDeviceByProductSn(ids) {
     method: 'get'
   })
 }
+
+// 写值：向设备的某个点位写入值（物模型列表「写值」按钮）
+// 入参只有 deviceSn / code / value 三个字段；失败时后端返回业务码（400/404/409/422/500/503/504）
+export function writePointValue(data) {
+  return request({
+    url: '/business/device/pointValue',
+    method: 'post',
+    data: data
+  })
+}
