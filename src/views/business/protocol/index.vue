@@ -54,14 +54,10 @@
         v-model="selectedCards"
         @change="handleCardSelectionChange"
       >
-        <el-row :gutter="15">
-          <el-col
+        <div class="card-grid">
+          <div
             v-for="(item, index) in protocolList"
             :key="index"
-            :xs="12"
-            :sm="8"
-            :md="6"
-            :lg="4"
             class="card-col"
           >
             <el-card class="protocol-card" shadow="hover">
@@ -119,8 +115,8 @@
                 </el-button>
               </div>
             </el-card>
-          </el-col>
-        </el-row>
+          </div>
+        </div>
       </el-checkbox-group>
     </div>
 
@@ -423,12 +419,47 @@ export default {
 </script>
 
 <style scoped>
+/* 底部留白：分页条是 fixed 悬浮层，留出足够高度避免最后一行卡片被遮挡 */
 .protocol-card-container {
-  margin-bottom: 30px;
+  margin-bottom: 100px;
+}
+
+/* 使用 Grid 布局替代 Element UI 栅格：浮动布局在同行卡片不等高时会把下一行卡片挤错列 */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 每行4个卡片 */
+  gap: 20px;
+}
+
+/* 栅格子项默认 min-width:auto，会被卡片内 nowrap 文本的 min-content 撑宽，
+   `1fr` 列宽就不再受容器约束、各列宽窄不一 —— 归零后列宽才真正等于容器均分 */
+.card-grid > *,
+.card-grid > * > *,
+.card-grid > * > * > * {
+  min-width: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr); /* 每行3个 */
+  }
+}
+
+@media (max-width: 992px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr); /* 每行2个 */
+  }
+}
+
+@media (max-width: 576px) {
+  .card-grid {
+    grid-template-columns: 1fr; /* 每行1个 */
+  }
 }
 
 .card-col {
-  margin-bottom: 20px;
+  display: flex;
   transition: transform 0.3s;
 }
 
@@ -448,6 +479,8 @@ export default {
 }
 
 .protocol-card {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   border-radius: 12px;
@@ -456,6 +489,13 @@ export default {
   position: relative;
   border: 1px solid #e6e8eb;
   background: #fff;
+}
+
+/* 内容撑满卡片剩余高度，底部操作栏始终贴卡片底部（同行卡片按钮才能对齐） */
+.protocol-card ::v-deep .el-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .protocol-card:hover {
@@ -503,6 +543,7 @@ export default {
 }
 
 .card-content {
+  flex: 1;
   padding: 15px;
   position: relative;
   z-index: 2;
@@ -535,7 +576,10 @@ export default {
   border-top: 1px solid #f0f2f5;
   text-align: center;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 6px;
+  margin-top: auto;
   position: relative;
   z-index: 2;
 }
@@ -543,7 +587,9 @@ export default {
 .action-btn {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  padding: 6px 10px;
+  padding: 5px 8px;
+  /* 按钮间距由 actions 的 gap 统一控制，去掉 Element 相邻按钮自带的 10px 左外边距 */
+  margin-left: 0 !important;
   transition: all 0.2s;
   font-size: 12px;
 }

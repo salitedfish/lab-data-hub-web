@@ -8,7 +8,7 @@
  */
 export function getWebSocketUrl(type, id = '') {
   const configured = (process.env.VUE_APP_WS_BASE_URL || '').trim()
-  // 显式配置了 WS 地址则直连；未配置时跟随当前页面地址（开发环境经 devServer /ws 代理转发到后端，生产环境同源）
+  // 显式配置了 WS 地址则直连；未配置时跟随当前页面地址（开发环境经 devServer 代理转发到后端，生产环境同源）
   let baseUrl
   if (configured) {
     baseUrl = configured
@@ -16,13 +16,17 @@ export function getWebSocketUrl(type, id = '') {
     const scheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
     baseUrl = scheme + window.location.host
   }
+
+  // 对外的 WS 路径前缀，默认 /ws（对应后端 @ServerEndpoint("/ws/{type}/{sign}")）。
+  // 生产若用别的路径对外暴露（如 nginx 把 /prod-hub-ws/ 转到后端的 /ws/），用 VUE_APP_WS_PATH_PREFIX 覆盖。
+  const prefix = (process.env.VUE_APP_WS_PATH_PREFIX || '/ws').replace(/\/+$/, '')
   const pathMap = {
-    component: '/ws/component/',
-    device: '/ws/device/',
-    system: '/ws/system/'
+    component: `${prefix}/component/`,
+    device: `${prefix}/device/`,
+    system: `${prefix}/system/`
   }
 
-  const path = pathMap[type] || '/ws/'
+  const path = pathMap[type] || `${prefix}/`
   return `${baseUrl.replace(/\/$/, '')}${path}${id}`
 }
 

@@ -27,6 +27,25 @@ src/
 └── views/         # 页面（business / system / monitor / tool / dashboard / login）
 ```
 
+## 卡片列表页排版约定（device / product / protocol / component / engine / scheduledEngine / devicelink 七页统一）
+
+这七个页面都是「卡片 + 悬浮分页条」的列表，**排版一律按下面这套写，不要再回退到 `el-row`/`el-col`**：
+
+1. **容器用 CSS Grid，不用 Element 栅格**：`.card-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px }`，`@media` 在 1200→3 列、992→2 列、576→1 列。
+   Element 的 `el-row`/`el-col` 是 **float 布局**（`.el-col-*{float:left}`），同行卡片高度不一时下一行的首卡会**卡进上一行最短卡的位置、落到错误列**（用户报的「上面一行卡片太高，下面一行就排到后面去了」就是这个）。`el-row--flex` 没有 `flex-wrap`，救不了。
+2. **必须给栅格子项加 `min-width: 0`**（`.card-grid > *`、`> * > *`、`> * > * > *` 三级都写）。栅格子项默认 `min-width:auto`，卡片里 `.value`/`.protocol-name` 这类 `white-space:nowrap` 文本的 **min-content 会把 `1fr` 列撑宽** —— 协议页实测算出 `795/788/791/779px` 的列宽，而容器只有 1034px，卡片整体溢出视口三四倍，而且**列宽还各不相同**。光靠 `overflow:hidden` 挡不住（它是子元素上的，撑宽发生在栅格子项这一级）。
+3. **卡片做成纵向 flex 列 + 底栏 `margin-top:auto`**，同行卡片等高、底部按钮才能落在同一条线上：
+   ```scss
+   .xxx-card { display:flex; flex-direction:column; height:100%; }
+   .xxx-card ::v-deep .el-card__body { flex:1; display:flex; flex-direction:column; }
+   .card-content { flex:1; }          /* 内容撑满，把底栏顶到底部 */
+   .card-actions { margin-top:auto; }
+   ```
+4. **底栏按钮**：`justify-content:center` + `flex-wrap:wrap` + `gap:8px 6px`，按钮 `.action-btn{padding:5px 8px; margin-left:0 !important}`。
+   `flex-wrap` 不能省 —— 数据转发页 4 个按钮在 4 列布局下放不下，没有换行时 `删除` 被裁得只剩图标。`margin-left:0` 是抵掉 Element 的 `.el-button+.el-button{margin-left:10px}`，否则换行后首列缩进不齐。`justify-content` 用 `center` 不用 `space-around`，否则换行后的行按钮会被推到两端。
+5. **容器 `margin-bottom: 100px`**：`.pagination-wrapper` 是 `position:fixed; bottom:20px` 的悬浮层（约 92px 高），不做底部留白时最后一行卡片会被盖住。（历史上这个留白写在错类名 `.product-card-container` 上，四个页面白留了。）
+6. 设备/产品页的底栏类名是 `.card-footer-actions`，协议/组件/引擎族是 `.card-actions`。
+
 ## 常用命令
 
 ```bash
@@ -39,7 +58,8 @@ npm run build:stage  # 预发构建（--mode staging）
 ## 联调配置
 
 - 后端地址：`vue.config.js` 中 `baseUrl = http://127.0.0.1:8085`，开发环境通过 devServer proxy 转发（HTTP `/dev-api` 与 WebSocket `/ws` 均代理到该后端）。
-- WebSocket：`src/utils/websocket.js` 的 `getWebSocketUrl` 未配置 `VUE_APP_WS_BASE_URL` 时跟随当前页面地址（开发环境经 devServer `/ws` 代理转发到后端同端口，本地/局域网访问均可）；`.env.development` 已置空该变量。
+- WebSocket：`src/utils/websocket.js` 的 `getWebSocketUrl` 未配置 `VUE_APP_WS_BASE_URL` 时跟随当前页面地址；**路径前缀由 `VUE_APP_WS_PATH_PREFIX` 控制**（留空 = 默认 `/ws`，开发环境即如此，经 devServer `/ws` 代理转发到后端同端口；`.env.production` 设为 `/prod-hub-ws`，避开过于通用的 `/ws`）。完整地址 = `ws(s)://<页面主机><前缀>/<type>/<id>`。
+- ⚠️ **生产部署必须自己代理该前缀，否则实时数据不刷新**：dev 能连是因为 `vue.config.js` devServer 有 `"/ws": { target: baseUrl, ws: true }`；生产没有 devServer，而 `getWebSocketUrl` 拼的是 **站点根路径** 下的 `<前缀>/<type>/<id>`（不在 `/lab_data_hub/` 子路径、也不在 `/prod-hub-api/` 里），所以 Web 服务器上要单独加一条 `location /prod-hub-ws/` → `proxy_pass http://127.0.0.1:8085/ws/`（**结尾必须是 `/ws/`**，把前缀换回后端真实端点），并带 `proxy_http_version 1.1` + `Upgrade`/`Connection` 头。**`proxy_read_timeout` 必须放大**（默认 60s 会把空闲的实时通道掐断，表现为「连上能用一会儿就不动了」）。参考配置：`文档/部署-nginx反向代理示例.conf`。症状识别：页面其余功能全正常、只有设备详情「实时数据」不动，切到物模型 tab 再切回来才变（那是 `handleTabClick` 里的 HTTP `getPropertyList` 在刷新，不走 WS），Network 面板 WS 分类下能看到失败请求。后端端点 `/ws/{type}/{sign}`（`WebSocketServer`）**不校验 token**，所以与登录态无关。
 - `publicPath`：`/lab_data_hub/`（生产部署路径，构建/上传时保持一致）。
 - 接口请求前缀通过环境变量 `VUE_APP_BASE_API` 控制（`.env.*` 文件）。
 
@@ -47,7 +67,7 @@ npm run build:stage  # 预发构建（--mode staging）
 
 - `src/utils/brotherTcpPoints.js` 内置 Brother NC 点位表，覆盖 **PDSP / WKCNTR / PRD3 / MEM / PANEL / MONT / PRDC2 / PRGN / ALARM** 九个数据区（语义点位 → 协议地址 数据区.行号.字段序号）。数据来源：PDSP 来自开源 BrotherAdapter 的 ProductionData3.json（与通讯手册交叉核对；注意真机 G01/M01 行序与表内不完全一致，坐标/倍率已真机核对）；WKCNTR、PRD3、**MEM**（A01 运行状态：程序号/加工状态/内托盘/模式）、**PANEL**（D01 门 / K01 面板开关 / S01 倍率+急停+门互锁+数据保护）来自**真机 LOD 实测结构**。地址约定与后端 `BrotherTcpDataReader` 一致：行号 1 起、字段序号为 Symbol 后第 1 个值起。**MONT/PRDC2/PRGN/ALARM 四个区为树根参照补齐（2026-08-26）**：树根 `RootLink.DC.Protocol.BrotherTcp.dll` 的 ReadPowerOnTime/ReadOperateTime→GetMontrParams(MONT)、ReadCuttingTime→GetPrdc2Info(PRDC2)、ReadProgramLineNumber/ReadProgramContent→GetPrgn(PRGN)、ReadAlarm→GetAlarmState+GetMem(ALARM)，字段位置反汇编推断、行号按标准单行取 1；**本机 LOD MONT/PRGN/PRDC2 返回空帧（PLCD/TOLSD 亦空帧），这些点位在本机读不到数据，地址待支持机型真机 LOD 采样确认；ALARM 无报警时空帧**，真实行结构待有报警时实测。VER 区为静态机型/版本/机身号，未收录点位，手动地址模式可选（`VER.1.1` 机型 / `VER.3.1` 机身号）。
 - `components/BrotherTcpConfig.vue` 配置抽屉据此提供**两级语义点位选择**：先选「点位类型」（按 数据区.行号 分组，`pointType` 值为 `数据区|行号`，如 `PDSP|4` P01 机械坐标 / `WKCNTR|1` A01 工件计数1），再选「点位」下拉（按分组过滤，选项右侧灰显符号地址）。选点自动填 标识(code=点位 key)/数据区/行号/字段序号 并展示符号地址/协议地址/建议数据类型；`pointType`/`pointKey` 为表单 model 字段（均有 `prop`，避免必填项校验报 undefined）。ALARM 及自定义地址走「手动指定地址」模式。选点填入的 `code` 需在「物模型」tab 建同名属性（identifier）数据才能按 dataType 正确解析。
-- **设备详情页**（`src/views/business/device/detail.vue`）：「实时数据」tab 实时值由 `/ws/device/{sn}` WebSocket 推送更新（WS 地址跟随页面地址），初始值由 `getDeviceLastData` 拉取；「历史数据」弹窗表格含 **属性名/属性值** 两列（解析日志 `properties` JSON 中 `DecodeMessage.properties` 对象，标识符映射物模型显示名），查询的「属性名称」过滤项传 `propertyName`（物模型 identifier）给后端 `/business/deviceLogs/list` 过滤。定时读取开关状态来自后端 `device.modbusRead`（切换时由后端 `readSwitchByDevice` 持久化）。**「定时读取」开关在「Modbus配置」tab（`#pane-modbusConfig`）里，不在物模型 tab**：未激活的 `el-tab-pane` 是 `display:none`，此时开关 `offsetWidth=0`（点了没反应、也不会发 `readSwitchByDevice`）—— 页面点测/排查要先点 `[aria-controls="pane-modbusConfig"]` 切到该 tab 再操作。物模型 tab 右上角另有「**写值记录**」按钮（`api/business/pointWriteRecord.js` → `/business/pointWriteRecord/list`）：弹窗含 序号/设备/点位名称/标识符/写入值/来源/结果/时间 八列（序号列用 `type="index"`，按当前页从 1 起，与 `tool/gen/index.vue` 一致）+ 属性名称/来源/结果/时间范围筛选 + 分页，`create_time` 倒序。**列宽要给弹性列 `min-width`、不能全写死 `width`**：全写死时列宽之和小于弹窗宽度，表格右侧会空出一条；留几个 `min-width` 列让 el-table 分配余量，表格才占满弹窗（末尾的 来源/结果/时间 保持固定 `width`）。**该按钮不加 `v-if`，所有协议共用同一入口**（协议解耦，「所有协议都一样」指的是记录页不按协议分叉，不是所有协议都能写）。失败行把错误码与原因挂在 `el-tag` 的 `el-tooltip` 上，悬停可见；「重置」只清筛选并回第 1 页、**保留每页条数**（与 RuoYi 其它列表一致）。
+- **设备详情页**（`src/views/business/device/detail.vue`）：「实时数据」tab 实时值由 `/ws/device/{sn}` WebSocket 推送更新（WS 地址跟随页面地址），初始值由 `getDeviceLastData` 拉取；实时通道自带**自动重连**（`connectSocket` / `handleSocketClosed`，延迟按 2s×次数 递增退避、上限 `maxReconnectAttempts`），实时数据表头有**连接状态标签**（`socketStatusText` / `socketStatusTagType`：绿=已连接、橙=连接中·重连中、红=断开·未连接），组件销毁时 `closeSocket` 停掉重连，切回「实时数据」tab 会清零重连计数重新拉起一次 —— 连接失败不再是静默的（原先 `onError` 只打印控制台、页面无任何提示）；「历史数据」弹窗表格含 **属性名/属性值** 两列（解析日志 `properties` JSON 中 `DecodeMessage.properties` 对象，标识符映射物模型显示名），查询的「属性名称」过滤项传 `propertyName`（物模型 identifier）给后端 `/business/deviceLogs/list` 过滤。定时读取开关状态来自后端 `device.modbusRead`（切换时由后端 `readSwitchByDevice` 持久化）。**「定时读取」开关在「Modbus配置」tab（`#pane-modbusConfig`）里，不在物模型 tab**：未激活的 `el-tab-pane` 是 `display:none`，此时开关 `offsetWidth=0`（点了没反应、也不会发 `readSwitchByDevice`）—— 页面点测/排查要先点 `[aria-controls="pane-modbusConfig"]` 切到该 tab 再操作。物模型 tab 右上角另有「**写值记录**」按钮（`api/business/pointWriteRecord.js` → `/business/pointWriteRecord/list`）：弹窗含 序号/设备/点位名称/标识符/写入值/来源/结果/时间 八列（序号列用 `type="index"`，按当前页从 1 起，与 `tool/gen/index.vue` 一致）+ 属性名称/来源/结果/时间范围筛选 + 分页，`create_time` 倒序。**列宽要给弹性列 `min-width`、不能全写死 `width`**：全写死时列宽之和小于弹窗宽度，表格右侧会空出一条；留几个 `min-width` 列让 el-table 分配余量，表格才占满弹窗（末尾的 来源/结果/时间 保持固定 `width`）。**该按钮不加 `v-if`，所有协议共用同一入口**（协议解耦，「所有协议都一样」指的是记录页不按协议分叉，不是所有协议都能写）。失败行把错误码与原因挂在 `el-tag` 的 `el-tooltip` 上，悬停可见；「重置」只清筛选并回第 1 页、**保留每页条数**（与 RuoYi 其它列表一致）。
 
 ## PLC 协议配置组件（Modbus / S7-1200 / OMRONFINS / 三菱 MC）
 

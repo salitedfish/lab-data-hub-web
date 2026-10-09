@@ -92,9 +92,20 @@
           <div class="tab-content">
             <div class="tab-header">
               <div class="tab-title">实时数据</div>
-              <el-button type="primary" @click="openHistoryData"
-                >历史数据</el-button
-              >
+              <div class="tab-header-actions">
+                <!-- 实时通道连接状态：断开/连不上时靠它显形（生产环境需反向代理 /ws，见 lab-data-hub-web/CLAUDE.md） -->
+                <el-tag
+                  v-if="connectionStatus"
+                  :type="socketStatusTagType"
+                  size="mini"
+                  effect="plain"
+                  class="socket-status-tag"
+                  >{{ socketStatusText }}</el-tag
+                >
+                <el-button type="primary" @click="openHistoryData"
+                  >历史数据</el-button
+                >
+              </div>
             </div>
             <!-- 属性卡片网格 -->
             <div class="property-cards-grid">
@@ -1596,6 +1607,10 @@ export default {
       this.handleTabClick({ name: this.$route.query.toPage });
     }
   },
+  beforeDestroy() {
+    // 离开设备详情页：停止重连并断开实时通道（否则组件销毁后定时器仍在后台重连）
+    this.closeSocket();
+  },
   computed: {
     // 写值输入控件类型：按物模型 dataType 分派（int/float/double 数字、bool 开关、其余文本框）
     // 只决定「用哪个控件」，不做值范围/可写性校验——那两层在后端（方案 4.7.4）
@@ -1636,6 +1651,30 @@ export default {
         this.regularCleaning = value ? "1" : "0";
       },
     },
+    // 实时通道连接状态文案（页面上可见，避免连不上时静默不刷新）
+    socketStatusText() {
+      const textMap = {
+        connecting: "实时通道连接中…",
+        connected: "实时通道已连接",
+        reconnecting: `实时通道重连中 ${this.reconnectAttempts}/${this.maxReconnectAttempts}…`,
+        disconnected: "实时通道已断开",
+        error: "实时通道未连接",
+      };
+      return textMap[this.connectionStatus] || "";
+    },
+    // 状态标签配色：已连接绿、连接/重连中橙、断开或失败红
+    socketStatusTagType() {
+      if (this.connectionStatus == "connected") {
+        return "success";
+      }
+      if (
+        this.connectionStatus == "connecting" ||
+        this.connectionStatus == "reconnecting"
+      ) {
+        return "warning";
+      }
+      return "danger";
+    },
   },
   data() {
     return {
@@ -1643,7 +1682,16 @@ export default {
       deviceId: "",
       isConnected: false,
       activeTab: "realData",
+      // 实时通道连接状态：connecting / connected / reconnecting / disconnected / error，页面表头以状态标签展示
       connectionStatus: "",
+      // 主动离开页面的标记，置位后不再自动重连，避免路由切走后还在后台反复重连
+      isManualClose: false,
+      // 已重连次数 / 上限：延迟按 2s×次数 递增退避，超过上限停在错误态等用户切回本页重新拉起
+      reconnectAttempts: 0,
+      maxReconnectAttempts: 5,
+      reconnectTimer: null,
+      // 本次连接建立的时刻
+      connectTime: null,
       device: {
         id: "",
         deviceName: "",
@@ -1911,6 +1959,13 @@ export default {
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     },
     handleTabClick(tab) {
+      //实时数据页面（实时通道断了的话，切回本页重新拉起一次，重连次数一并清零）
+      if (tab.name == "realData") {
+        if (!this.isConnected) {
+          this.reconnectAttempts = 0;
+          this.connectSocket();
+        }
+      }
       //物模型页面（协议点位增删改后自动同步的物模型属性，切回来重新拉取）
       if (tab.name === "thingModel") {
         //初始化数据
@@ -2240,41 +2295,98 @@ export default {
       this.thingModelData.unshift(newItem);
       // this.$message.info('添加新属性，请编辑详细信息');
     },
+    // 建立设备实时数据 WebSocket 通道。
+    // 断开或失败都会自动重连（延迟按次数递增），连接状态经 connectionStatus 在实时数据表头可见。
     connectSocket() {
-      if (this.isConnected || !this.device || !this.device.id) return;
+      if (!this.device || !this.device.id) return;
+      if (this.isConnected) return;
+
+      // 连之前先收掉可能残留的旧连接与待触发的重连定时器，避免同一设备挂出多条 socket
+      this.clearReconnectTimer();
+      this.cleanupWebSocket();
+
       this.connectionStatus = "connecting";
+      this.isManualClose = false;
 
       try {
-        // 方式1：直接使用工具函数获取 URL
-        // const wsUrl = getWebSocketUrl('component', this.component.id)
-        // this.websocket = new WebSocket(wsUrl)
-
-        // 方式2：使用封装的创建函数（推荐）
         this.websocket = createWebSocket("device", this.device.deviceSn, {
           onOpen: () => {
             this.isConnected = true;
             this.connectionStatus = "connected";
             this.connectTime = new Date();
+            // 真正连上了才清零，否则退避轮次会被重置成一直重试
+            this.reconnectAttempts = 0;
           },
           onMessage: (event) => {
             const message = JSON.parse(event.data);
             this.updateRealTimeProperties(message);
           },
-          onClose: (event) => {
+          onClose: () => {
             this.isConnected = false;
-            this.connectionStatus = "disconnected";
             this.connectTime = null;
-            const reason = event.reason || "";
+            this.handleSocketClosed();
           },
-          onError: (error) => {
-            this.connectionStatus = "error";
-            console.error("WebSocket error:", error);
+          onError: () => {
+            // 浏览器出于安全不暴露失败细节，具体原因看控制台/网络面板里那条 ws 请求的状态码
+            console.error("设备实时数据 WebSocket 连接异常");
           },
         });
       } catch (error) {
         this.connectionStatus = "error";
-        this.addMessage("系统", `连接失败: ${error.message}`, "system");
+        console.error("设备实时数据 WebSocket 创建失败：", error);
       }
+    },
+    // 断开后的统一收口：主动离开页面不重连；否则按 2s×次数 递增退避重试，超过上限停在错误态
+    handleSocketClosed() {
+      this.cleanupWebSocket();
+
+      if (this.isManualClose) {
+        this.connectionStatus = "disconnected";
+        return;
+      }
+
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        this.connectionStatus = "error";
+        return;
+      }
+
+      this.reconnectAttempts++;
+      this.connectionStatus = "reconnecting";
+      this.clearReconnectTimer();
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        this.connectSocket();
+      }, 2000 * this.reconnectAttempts);
+    },
+    // 先摘掉回调再关闭，避免旧连接的 onclose 再触发一轮重连
+    cleanupWebSocket() {
+      const socket = this.websocket;
+      if (!socket) return;
+      this.websocket = null;
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onclose = null;
+      socket.onerror = null;
+      try {
+        socket.close();
+      } catch (error) {
+        console.error("关闭设备实时数据 WebSocket 失败：", error);
+      }
+    },
+    clearReconnectTimer() {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+    },
+    // 离开页面时停止重连并断开
+    closeSocket() {
+      this.isManualClose = true;
+      this.reconnectAttempts = 0;
+      this.clearReconnectTimer();
+      this.isConnected = false;
+      this.connectionStatus = "";
+      this.cleanupWebSocket();
     },
     addService() {
       this.$message.info("添加服务功能");
@@ -2934,6 +3046,17 @@ export default {
   height: 20px;
   background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
   border-radius: 2px;
+}
+
+/* 实时数据表头右侧：连接状态标签 + 历史数据按钮 */
+.tab-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.socket-status-tag {
+  font-weight: normal;
 }
 
 .action-btn {

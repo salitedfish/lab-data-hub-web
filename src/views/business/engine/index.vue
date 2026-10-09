@@ -66,6 +66,8 @@
               class="action-btn status-btn"
               :class="item.isEnable == 1 ? 'stop-btn' : 'start-btn'"
               :icon="item.isEnable == 1 ? 'el-icon-switch-button' : 'el-icon-open'"
+              :loading="statusLoading[item.id]"
+              :disabled="statusLoading[item.id]"
               @click.stop="toggleStatus(item)"
             >
               {{ item.isEnable == 1 ? '停止' : '启动' }}
@@ -144,6 +146,8 @@ export default {
     return {
       // 遮罩层
       loading: true,
+      // 各规则引擎启停按钮的独立 loading（按 id 区分，避免点一张卡片让所有卡片一起转圈）
+      statusLoading: {},
       // 选中数组
       ids: [],
       // 选中的卡片
@@ -269,14 +273,20 @@ export default {
       }).catch(() => {
       })
     },
-    toggleStatus(item){
-      console.log(item.isEnable)
-      control({id:item.id,isEnable:item.isEnable==1?0:1}).then(res=>{
-        if(res?.code==200){
-          this.$message.success("操作成功")
-          this.getList()
-        }
-      })
+    /** 启停规则引擎 */
+    async toggleStatus(item){
+      this.$set(this.statusLoading, item.id, true)
+      try {
+        await control({id: item.id, isEnable: item.isEnable == 1 ? 0 : 1})
+        this.$message.success("操作成功")
+        this.getList()
+      } catch (e) {
+        // 失败原因由 request.js 拦截器统一提示（500 走 Message、其余非 200 走 Notification），
+        // 卡片状态本来就取自服务端数据，失败时无需刷新也不会显示成已启用
+        console.error('启停规则引擎失败：', e)
+      } finally {
+        this.$set(this.statusLoading, item.id, false)
+      }
     },
     showEngineDetail(engine) {
       this.$router.push({
@@ -291,8 +301,9 @@ export default {
 </script>
 
 <style scoped>
+/* 底部留白：分页条是 fixed 悬浮层，留出足够高度避免最后一行卡片被遮挡 */
 .component-card-container {
-  margin-bottom: 30px;
+  margin-bottom: 100px;
 }
 
 /* 使用 Grid 布局替代 Element UI 栅格 */
@@ -300,6 +311,14 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, 1fr); /* 每行4个卡片 */
   gap: 20px;
+}
+
+/* 栅格子项默认 min-width:auto，会被卡片内 nowrap 文本的 min-content 撑宽，
+   `1fr` 列宽就不再受容器约束、各列宽窄不一 —— 归零后列宽才真正等于容器均分 */
+.card-grid > *,
+.card-grid > * > *,
+.card-grid > * > * > * {
+  min-width: 0;
 }
 
 /* 响应式调整 */
@@ -342,6 +361,8 @@ export default {
 }
 
 .component-card {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   border-radius: 12px;
@@ -350,6 +371,13 @@ export default {
   position: relative;
   border: 1px solid #e6e8eb;
   background: #fff;
+}
+
+/* 内容撑满卡片剩余高度，底部操作栏始终贴卡片底部（同行卡片按钮才能对齐） */
+.component-card ::v-deep .el-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .component-card:hover {
@@ -435,6 +463,7 @@ export default {
 }
 
 .card-content {
+  flex: 1;
   padding: 15px;
   position: relative;
   z-index: 2;
@@ -467,7 +496,11 @@ export default {
   border-top: 1px solid #f0f2f5;
   text-align: center;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  /* 四个按钮在窄列放不下会溢出被裁掉，必须允许换行 */
+  flex-wrap: wrap;
+  gap: 8px 6px;
+  margin-top: auto;
   position: relative;
   z-index: 2;
 }
@@ -475,7 +508,9 @@ export default {
 .action-btn {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  padding: 6px 10px;
+  padding: 5px 8px;
+  /* 按钮间距由 actions 的 gap 统一控制，去掉 Element 相邻按钮自带的 10px 左外边距 */
+  margin-left: 0 !important;
   transition: all 0.2s;
   font-size: 12px;
 }
@@ -511,11 +546,6 @@ export default {
   right: 20px;
   padding: 10px 15px;
   z-index: 1000;
-}
-
-/* 调整卡片容器底部边距，避免内容被分页遮挡 */
-.product-card-container {
-  margin-bottom: 80px;
 }
 
 /* 可选：如果需要进一步美化分页组件本身 */

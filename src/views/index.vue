@@ -716,12 +716,30 @@ body {
   }
 }
 
-/* 数据统计卡片 */
+/* 数据统计卡片：5 张卡按 5/3/2/1 列降级，避免固定列数把最后一张挤成孤行 */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin-bottom: 40px;
+}
+
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
@@ -732,6 +750,8 @@ body {
   overflow: hidden;
   border: 1px solid #e2e8f0;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }

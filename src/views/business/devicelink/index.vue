@@ -294,8 +294,9 @@ export default {
 </script>
 
 <style scoped>
+/* 底部留白：分页条是 fixed 悬浮层，留出足够高度避免最后一行卡片被遮挡 */
 .component-card-container {
-  margin-bottom: 30px;
+  margin-bottom: 100px;
 }
 
 /* 使用 Grid 布局替代 Element UI 栅格 */
@@ -303,6 +304,14 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, 1fr); /* 每行4个卡片 */
   gap: 20px;
+}
+
+/* 栅格子项默认 min-width:auto，会被卡片内 nowrap 文本的 min-content 撑宽，
+   `1fr` 列宽就不再受容器约束、各列宽窄不一 —— 归零后列宽才真正等于容器均分 */
+.card-grid > *,
+.card-grid > * > *,
+.card-grid > * > * > * {
+  min-width: 0;
 }
 
 /* 响应式调整 */
@@ -345,6 +354,8 @@ export default {
 }
 
 .component-card {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   border-radius: 12px;
@@ -353,6 +364,13 @@ export default {
   position: relative;
   border: 1px solid #e6e8eb;
   background: #fff;
+}
+
+/* 内容撑满卡片剩余高度，底部操作栏始终贴卡片底部（同行卡片按钮才能对齐） */
+.component-card ::v-deep .el-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .component-card:hover {
@@ -438,6 +456,7 @@ export default {
 }
 
 .card-content {
+  flex: 1;
   padding: 15px;
   position: relative;
   z-index: 2;
@@ -473,7 +492,11 @@ export default {
   border-top: 1px solid #f0f2f5;
   text-align: center;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  /* 四个按钮在窄列放不下会溢出被裁掉，必须允许换行 */
+  flex-wrap: wrap;
+  gap: 8px 6px;
+  margin-top: auto;
   position: relative;
   z-index: 2;
 }
@@ -481,7 +504,9 @@ export default {
 .action-btn {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  padding: 6px 10px;
+  padding: 5px 8px;
+  /* 按钮间距由 actions 的 gap 统一控制，去掉 Element 相邻按钮自带的 10px 左外边距 */
+  margin-left: 0 !important;
   transition: all 0.2s;
   font-size: 12px;
 }
@@ -517,11 +542,6 @@ export default {
   right: 20px;
   padding: 10px 15px;
   z-index: 1000;
-}
-
-/* 调整卡片容器底部边距，避免内容被分页遮挡 */
-.product-card-container {
-  margin-bottom: 80px;
 }
 
 /* 可选：如果需要进一步美化分页组件本身 */

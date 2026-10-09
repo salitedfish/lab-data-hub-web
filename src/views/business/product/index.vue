@@ -42,15 +42,10 @@
 
     <!-- 卡片展示区域 -->
     <div class="product-card-container">
-      <el-row :gutter="20">
-        <el-col
+      <div class="card-grid">
+        <div
           v-for="(item, index) in productList"
           :key="index"
-          :xs="24"
-          :sm="12"
-          :md="8"
-          :lg="6"
-          :xl="4"
           class="card-col"
         >
           <div class="product-card-wrapper">
@@ -136,8 +131,8 @@
               </div>
             </el-card>
           </div>
-        </el-col>
-      </el-row>
+        </div>
+      </div>
 
       <!-- 空状态 -->
       <div v-if="productList.length === 0" class="empty-state">
@@ -462,21 +457,62 @@ export default {
   min-height: calc(100vh - 50px);
 }
 
+/* 使用 Grid 布局替代 Element UI 栅格：浮动布局在同行卡片不等高时会把下一行卡片挤错列 */
 .product-card-container {
   padding: 20px 0;
+  /* 分页条固定在视口底部，留出底部空白避免压住最后一排卡片 */
+  margin-bottom: 100px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 每行4个卡片 */
+  gap: 20px;
+}
+
+/* 栅格子项默认 min-width:auto，会被卡片内 nowrap 文本的 min-content 撑宽，
+   `1fr` 列宽就不再受容器约束、各列宽窄不一 —— 归零后列宽才真正等于容器均分 */
+.card-grid > *,
+.card-grid > * > *,
+.card-grid > * > * > * {
+  min-width: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr); /* 每行3个 */
+  }
+}
+
+@media (max-width: 992px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr); /* 每行2个 */
+  }
+}
+
+@media (max-width: 576px) {
+  .card-grid {
+    grid-template-columns: 1fr; /* 每行1个 */
+  }
 }
 
 .card-col {
-  margin-bottom: 24px;
+  display: flex;
+  transition: transform 0.3s;
+}
+
+.card-col:hover {
+  transform: translateY(-4px);
 }
 
 .product-card-wrapper {
-  height: 100%;
+  display: flex;
+  flex: 1;
+  min-width: 0;
   transition: all 0.3s ease;
 
   &:hover {
-    transform: translateY(-4px);
-
     .product-card {
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
     }
@@ -484,6 +520,9 @@ export default {
 }
 
 .product-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   border-radius: 12px !important;
   border: 1px solid #e4e7ed !important;
   overflow: hidden;
@@ -493,6 +532,13 @@ export default {
 
   &:hover {
     border-color: #c0c4cc !important;
+  }
+
+  /* 内容撑满卡片剩余高度，底部操作栏始终贴卡片底部（同行卡片按钮才能对齐） */
+  ::v-deep .el-card__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -559,6 +605,7 @@ export default {
 }
 
 .card-main-content {
+  flex: 1;
   padding: 24px 20px;
   cursor: pointer;
   transition: all 0.2s;
@@ -678,11 +725,11 @@ export default {
 
 .card-footer-actions {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   flex-wrap: wrap;
-  row-gap: 8px;
-  column-gap: 4px;
-  padding: 16px 20px;
+  gap: 8px 6px;
+  margin-top: auto;
+  padding: 16px 12px;
   background: #f8fafc;
   border-top: 1px solid #f0f2f5;
 }
@@ -691,7 +738,9 @@ export default {
   color: #606266;
   font-size: 13px;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 4px 6px;
+  /* 按钮间距由 footer 的 gap 统一控制，去掉 Element 相邻按钮自带的 10px 左外边距 */
+  margin-left: 0 !important;
 
   &:hover {
     color: #409EFF;
@@ -903,6 +952,11 @@ export default {
     box-shadow: none;
     background: transparent;
     padding: 0;
+  }
+
+  /* 分页已回到文档流，不再需要为悬浮分页留白 */
+  .product-card-container {
+    margin-bottom: 0;
   }
 }
 
