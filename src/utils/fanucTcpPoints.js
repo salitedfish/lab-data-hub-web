@@ -10,7 +10,7 @@
  *   - param1/param2 随类型含义不同，见下表各点位 desc；未用到的参数不填（地址中省略）
  *
  * 数据来源：
- *   - FANUC FOCAS2 官方函数库 fwlib32 读取函数族（cnc_rdaxisdata / cnc_acts /
+ *   - FANUC FOCAS2 官方函数库 fwlib 读取函数族（cnc_rdaxisdata / cnc_acts /
  *     cnc_rdspload / cnc_actf / cnc_statinfo / cnc_rdprgnum / cnc_rdseqnum /
  *     cnc_exeprgname / cnc_rdalmmsg / cnc_rdmacro / cnc_rdtimer / cnc_rdcount /
  *     cnc_diagnoss / pmc_rdpmcrng）。

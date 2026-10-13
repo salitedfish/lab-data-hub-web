@@ -107,7 +107,18 @@ service.interceptors.response.use(res => {
       Message({ message: msg, type: 'error' })
       return Promise.reject(new Error(msg))
     } else if (code === 601) {
-      Message({ message: msg, type: 'warning' })
+      // 带换行的告警是后端给出的详细诊断（如协议包加载失败的「可能原因 / 处理办法」），
+      // 默认 3 秒就消失的 toast 根本读不完，改成长驻通知、保留换行；一句话的普通告警仍走 toast 不动。
+      if (msg && msg.indexOf('\n') != -1) {
+        Notification.warning({
+          title: '操作未完成',
+          dangerouslyUseHTMLString: true,
+          message: String(msg).replace(/\r?\n/g, '<br/>'),
+          duration: 0
+        })
+      } else {
+        Message({ message: msg, type: 'warning' })
+      }
       return Promise.reject('error')
     } else if (code !== 200) {
       Notification.error({ title: msg })

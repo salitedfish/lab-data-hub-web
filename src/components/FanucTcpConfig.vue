@@ -339,7 +339,7 @@ export default {
       },
       fanucTcpForm: {},
       fanucTcpList: [],
-      // 采集项选项及含义说明（对应 FOCAS2 fwlib32 读取函数族）
+      // 采集项选项及含义说明（对应 FOCAS2 官方库读取函数族）
       readTypeOptions: [
         { value: "axis", label: "axis 坐标", desc: "坐标：param1=轴号(1 X 2 Y 3 Z 4 A 5 B 6 C)，param2=坐标类型(1机械 2绝对 3相对 4剩余)" },
         { value: "spindle", label: "spindle 主轴", desc: "主轴：param1=1转速(cnc_acts) 2倍率(无直接函数需PMC) 3负载(cnc_rdspload) 4报警(cnc_rdalmmsg type=9)" },

@@ -484,15 +484,15 @@
                     placeholder="如：3000"
                   />
                 </el-form-item>
-                <!-- FANUC 专用：fwlib32 库路径（可选，默认自动搜索 java.library.path / lib 目录等） -->
+                <!-- FANUC 专用：FOCAS2 库路径（可选，默认自动搜索 java.library.path / lib 目录等） -->
                 <el-form-item
-                  label="fwlib32库路径"
+                  label="FOCAS2库路径"
                   prop="dynamicConfig.libPath"
                   v-if="form.netType === 'FANUC_TCP'"
                 >
                   <el-input
                     v-model="form.dynamicConfig.libPath"
-                    placeholder="可空；如 /opt/fanuc/libfwlib32.so（不填则自动搜索常见目录）"
+                    placeholder="可空；Windows 如 C:\fanuc\Fwlib64.dll，Linux 如 /opt/fanuc/libfwlib32.so（不填则自动搜索常见目录）"
                   />
                 </el-form-item>
               </template>
@@ -1378,13 +1378,16 @@ export default {
         })
         .catch(() => {});
     },
-    toggleStatus(item) {
-      control({ id: item.id, status: item.status == 1 ? 0 : 1 }).then((res) => {
-        if (res?.code == 200) {
-          this.$message.success("操作成功");
-          this.getList();
-        }
-      });
+    async toggleStatus(item) {
+      try {
+        await control({ id: item.id, status: item.status == 1 ? 0 : 1 });
+        this.$message.success("操作成功");
+        this.getList();
+      } catch (error) {
+        // 失败原因由 request 拦截器统一提示：开启失败多为协议包加载不了，
+        // 后端会给出一条带「可能原因 / 处理办法」的详情通知（长驻，不自动消失）
+        console.error("切换网络组件状态失败", error);
+      }
     },
     /** 导出按钮操作 */
     handleExport() {
