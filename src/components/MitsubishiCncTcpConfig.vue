@@ -135,6 +135,20 @@
           :model="mitsubishiCncTcpForm"
           label-width="140px"
         >
+          <!-- 机型/NC型（配在网络组件上，此处只读展示）：决定下方「点位」下拉取哪张语义点位表 -->
+          <div class="model-bar">
+            <span class="model-bar-label">机型 / NC型</span>
+            <span class="model-bar-value">{{ modelText }}</span>
+            <span class="model-bar-tip" v-if="!model">
+              网络组件上未设置机型，暂按 M70/M700 的点位与地址工作；请到「网络组件」页编辑该组件并选择机型。
+            </span>
+            <span class="model-bar-tip verified" v-else-if="modelInfo.verified">
+              本机型已按 M70/M700 的点位与地址真机实测通过（2026-10-15），沿用它即可。
+            </span>
+            <span class="model-bar-tip" v-else-if="!modelInfo.hasOwnTable">
+              本机型暂无专属点位表，暂按 M70/M700 的点位与地址工作；若读不到值需按厂商主机通信文档核对。
+            </span>
+          </div>
           <!-- 语义点位选择：先选点位类型（采集项），再选具体点位，自动填 标识/采集项/轴号 -->
           <el-form-item label="点位类型" prop="pointType" required v-if="!manualMode">
             <el-select
@@ -287,10 +301,12 @@ import {
 import { readMitsubishiCncTcpSwitchByDevice } from "@/api/business/mitsubishiCncTcp";
 import { syncConfigToDevice } from "@/api/business/mitsubishiCncTcp";
 // 内置 MOCHA 点位表：语义点位 → 协议地址（采集项[.轴号]），数据来源见 utils/cncTcpPoints.js
+// 点位表按机型取（机型配在网络组件上，由详情页以 model 传入）
 import {
-  CNC_TCP_POINT_TABLE,
   CNC_TCP_ROW_LABELS,
   CNC_TCP_READTYPE_NAMES,
+  getCncTcpPointTable,
+  findCncTcpModel,
   findCncTcpPoint,
   cncTcpAddress as toAddress,
   isAxisReadType,
@@ -311,6 +327,12 @@ export default {
     isProductIn: {
       type: Boolean,
       default: false,
+    },
+    // 机床机型/NC型（取自网络组件 other_config.model），决定取哪张语义点位表；
+    // 未设置时按兜底机型（M70/M700 表）工作，并在抽屉里提示未设置
+    model: {
+      type: String,
+      default: "",
     },
   },
   data() {
@@ -346,9 +368,21 @@ export default {
     };
   },
   computed: {
+    // 当前机型定义（抽屉顶部展示机型与点位表来源用）
+    modelInfo() {
+      return findCncTcpModel(this.model);
+    },
+    // 机型展示文案：未设置时不冒充兜底机型的名字，如实写"未设置"
+    modelText() {
+      return this.model ? this.modelInfo.label : "未设置";
+    },
+    // 该机型可用的语义点位表（未设置/不认识的机型按兜底机型兜底）
+    pointTable() {
+      return getCncTcpPointTable(this.model);
+    },
     // 当前所选采集项的含义说明（取点表中该类型的首条 desc）
     readTypeDesc() {
-      const p = CNC_TCP_POINT_TABLE.find(
+      const p = this.pointTable.find(
         (o) => o.readType == this.mitsubishiCncTcpForm.readType
       );
       return p ? p.desc : "";
@@ -360,7 +394,7 @@ export default {
     // 点位类型列表（按语义分组 group，组名与点位名错开避免重复）
     pointTypes() {
       const types = [];
-      CNC_TCP_POINT_TABLE.forEach((p) => {
+      this.pointTable.forEach((p) => {
         if (p.group && !types.find((t) => t.value == p.group)) {
           types.push({
             value: p.group,
@@ -376,9 +410,9 @@ export default {
         this.mitsubishiCncTcpForm.pointType == null ||
         this.mitsubishiCncTcpForm.pointType == ""
       ) {
-        return CNC_TCP_POINT_TABLE;
+        return this.pointTable;
       }
-      return CNC_TCP_POINT_TABLE.filter(
+      return this.pointTable.filter(
         (p) => p.group == this.mitsubishiCncTcpForm.pointType
       );
     },
@@ -407,7 +441,7 @@ export default {
       if (!row) {
         return "";
       }
-      const p = findCncTcpPoint(row.readType, row.axisNo);
+      const p = findCncTcpPoint(row.readType, row.axisNo, this.model);
       return p ? p.name : toAddress(row);
     },
     async getMitsubishiCncTcpConfigByDeviceSn() {
@@ -533,7 +567,7 @@ export default {
         this.selectedPoint = null;
         return;
       }
-      const p = CNC_TCP_POINT_TABLE.find((x) => x.key == key);
+      const p = this.pointTable.find((x) => x.key == key);
       if (!p) {
         return;
       }
@@ -554,7 +588,8 @@ export default {
       if (!this.manualMode) {
         const p = findCncTcpPoint(
           this.mitsubishiCncTcpForm.readType,
-          this.mitsubishiCncTcpForm.axisNo
+          this.mitsubishiCncTcpForm.axisNo,
+          this.model
         );
         if (p) {
           this.selectedPoint = p;
@@ -583,7 +618,7 @@ export default {
       this.mitsubishiCncTcpForm.belongSn = this.deviceSn;
       this.mitsubishiCncTcpForm.belongType = "0";
       // 默认预选 mechpos.1 机械坐标 X，便于体验点选
-      const defaultPoint = findCncTcpPoint("mechpos", 1);
+      const defaultPoint = findCncTcpPoint("mechpos", 1, this.model);
       this.selectedPoint = defaultPoint;
       this.mitsubishiCncTcpForm.pointType = defaultPoint.group;
       this.mitsubishiCncTcpForm.pointKey = defaultPoint.key;
@@ -608,7 +643,8 @@ export default {
           // 地址命中点表则预选点位并展示地址；未命中（自定义采集项）走手动输入
           const p = findCncTcpPoint(
             this.mitsubishiCncTcpForm.readType,
-            this.mitsubishiCncTcpForm.axisNo
+            this.mitsubishiCncTcpForm.axisNo,
+            this.model
           );
           if (p) {
             this.manualMode = false;
@@ -712,6 +748,37 @@ export default {
 
 .drawer-content {
   padding: 20px;
+}
+
+/* 机型/NC型展示条（只读）：说明下方点位下拉取自哪个机型的点表 */
+.model-bar {
+  margin: 0 0 16px 140px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #333;
+}
+
+.model-bar-label {
+  display: inline-block;
+  width: 70px;
+  color: #999;
+}
+
+.model-bar-value {
+  font-weight: 600;
+}
+
+.model-bar-tip {
+  display: block;
+  color: #e6a23c;
+}
+
+/* 已真机实测通过的机型（如 M80）：中性说明，不用橙色告警色 */
+.model-bar-tip.verified {
+  color: #909399;
 }
 
 /* 选中点位后的地址信息展示块（左对齐表单输入区，label 宽 140px） */

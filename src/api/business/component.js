@@ -43,12 +43,15 @@ export function delComponent(id) {
   })
 }
 
-// 修改网络组件
-export function control(data) {
+// 开启 / 关闭网络组件
+// config 可选：透传给 axios 的额外配置。批量启停时传 { silentError: true }，
+// 让每条的失败提示不再各自弹窗，交由调用方收齐后统一汇总。
+export function control(data, config) {
   return request({
     url: '/business/component/control?id=' + data.id + "&status=" + data.status,
     method: 'put',
-    data: {}
+    data: {},
+    ...config
   })
 }
 

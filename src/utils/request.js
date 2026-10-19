@@ -86,6 +86,12 @@ service.interceptors.response.use(res => {
     // 业务码也用 404（如写值时的「设备不存在 / 点位未配置」）时，
     // 压过后端 msg 会把具体原因换成笼统的「访问资源不存在」，反而看不见问题所在。
     const msg = res.data.msg || errorCode[code] || errorCode['default']
+    // 静默模式（可选，默认关闭）：由调用方在请求配置里传 silentError: true 开启。
+    // 批量启停网络组件会一次发很多请求，若每条都走下面的弹窗，失败项会叠成一堵墙盖住页面；
+    // 这类场景由调用方收齐结果后统一提示。这里只关掉「每个请求各自的提示」，不改变成败语义 ——
+    // 仍然 reject，并且把后端 msg 带出去（原本 601 / 非 200 分支只 reject 一个 'error'，调用方
+    // 汇总时拿不到原因）。401 不受影响：登录态过期必须弹重登框。
+    const silent = res.config && res.config.silentError === true
     // 二进制数据则直接返回
     if (res.request.responseType ===  'blob' || res.request.responseType ===  'arraybuffer') {
       return res.data
@@ -103,6 +109,9 @@ service.interceptors.response.use(res => {
       })
     }
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
+    } else if (silent && code !== 200) {
+      // 静默模式：不弹窗，但把后端 msg 交给调用方去汇总
+      return Promise.reject(new Error(msg))
     } else if (code === 500) {
       Message({ message: msg, type: 'error' })
       return Promise.reject(new Error(msg))
@@ -136,6 +145,11 @@ service.interceptors.response.use(res => {
       message = "系统接口请求超时"
     } else if (message.includes("Request failed with status code")) {
       message = "系统接口" + message.substr(message.length - 3) + "异常"
+    }
+    if (error.config && error.config.silentError === true) {
+      // 静默模式（见上方响应分支的同名说明）：不弹窗，把归一化后的文案带出去给调用方汇总
+      error.silentMessage = message
+      return Promise.reject(error)
     }
     Message({ message: message, type: 'error', duration: 5 * 1000 })
     return Promise.reject(error)

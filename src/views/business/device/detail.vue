@@ -364,6 +364,7 @@
           <MitsubishiCncTcpConfig
             :device-sn="device.deviceSn"
             :enabled="modbusEnabled"
+            :model="cncModel"
           />
         </el-tab-pane>
         <el-tab-pane
@@ -1612,6 +1613,19 @@ export default {
     this.closeSocket();
   },
   computed: {
+    // 三菱 CNC 机型/NC型：存在网络组件的 other_config 里（改 IP 的同一份配置），
+    // 传给 MitsubishiCncTcpConfig 决定「点位」下拉取哪张语义点位表；未设置时为空串，由该组件兜底
+    cncModel() {
+      try {
+        if (!this.component?.otherConfig) {
+          return "";
+        }
+        return JSON.parse(this.component.otherConfig).model || "";
+      } catch (e) {
+        console.error("解析网络组件动态配置失败", e);
+        return "";
+      }
+    },
     // 写值输入控件类型：按物模型 dataType 分派（int/float/double 数字、bool 开关、其余文本框）
     // 只决定「用哪个控件」，不做值范围/可写性校验——那两层在后端（方案 4.7.4）
     writeInputType() {

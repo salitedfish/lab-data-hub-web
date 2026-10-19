@@ -395,6 +395,7 @@
           <MitsubishiCncTcpConfig
             :device-sn="product.productSn"
             :isProductIn="true"
+            :model="cncModel"
           />
         </el-tab-pane>
         <el-tab-pane
@@ -1217,6 +1218,19 @@ export default {
     };
   },
   computed: {
+    // 三菱 CNC 机型/NC型：存在网络组件的 other_config 里（改 IP 的同一份配置），
+    // 传给 MitsubishiCncTcpConfig 决定「点位」下拉取哪张语义点位表；未设置时为空串，由该组件兜底
+    cncModel() {
+      try {
+        if (!this.component?.otherConfig) {
+          return "";
+        }
+        return JSON.parse(this.component.otherConfig).model || "";
+      } catch (e) {
+        console.error("解析网络组件动态配置失败", e);
+        return "";
+      }
+    },
     // 前端显示的布尔值
     regularCleaningBoolean: {
       get() {
