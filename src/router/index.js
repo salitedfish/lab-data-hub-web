@@ -70,7 +70,8 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/index'),
         name: 'Index',
-        meta: { title: '首页', icon: 'dashboard', affix: true }
+        // 首页是实时看板，每次切回都重新拉数，不参与 keep-alive 缓存
+        meta: { title: '首页', icon: 'dashboard', affix: true, noCache: true }
       }
     ]
   },
@@ -97,7 +98,8 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/component/detail'),
         name: 'ComponentDetail',
-        meta: { title: '组件详情', activeMenu: '/componentManage/component' }
+        // 详情页通过 query 区分不同对象、且同一 path 切换对象时会复用组件实例，不能缓存
+        meta: { title: '组件详情', activeMenu: '/componentManage/component', noCache: true }
       }
     ]
   },
@@ -110,7 +112,7 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/product/detail'),
         name: 'ProductDetail',
-        meta: { title: '产品详情', activeMenu: '/deviceManage/product' }
+        meta: { title: '产品详情', activeMenu: '/deviceManage/product', noCache: true }
       }
     ]
   },
@@ -123,7 +125,7 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/device/detail'),
         name: 'DeviceDetail',
-        meta: { title: '设备详情', activeMenu: '/deviceManage/device' }
+        meta: { title: '设备详情', activeMenu: '/deviceManage/device', noCache: true }
       }
     ]
   },
@@ -136,7 +138,7 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/engine/detail'),
         name: 'EngineDetail',
-        meta: { title: '组件详情', activeMenu: '/componentManage/engine' }
+        meta: { title: '组件详情', activeMenu: '/componentManage/engine', noCache: true }
       }
     ]
   },
@@ -149,7 +151,7 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/devicelink/detail'),
         name: 'DevicelinkDetail',
-        meta: { title: '设备联动详情', activeMenu: '/componentManage/devicelink' }
+        meta: { title: '设备联动详情', activeMenu: '/componentManage/devicelink', noCache: true }
       }
     ]
   },
@@ -162,7 +164,7 @@ export const constantRoutes = [
         path: 'index',
         component: () => import('@/views/business/scheduledEngine/detail'),
         name: 'ScheduledEngineDetail',
-        meta: { title: '定时引擎详情', activeMenu: '/componentManage/scheduledEngine' }
+        meta: { title: '定时引擎详情', activeMenu: '/componentManage/scheduledEngine', noCache: true }
       }
     ]
   }

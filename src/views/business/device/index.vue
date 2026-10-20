@@ -487,6 +487,10 @@ export default {
           ...data,
           id: null,
           deviceSn: (data.deviceSn || "") + "-副本",
+          // 设备 status 是「在线/离线」运行时状态，不是配置：复制时若把原设备的 1 带过去，
+          // 新设备会在从未收到任何数据、组件甚至没启动的情况下一直显示在线（离线状态只能由
+          // 组件掉线事件写入，而它从没上线过、不会有这个事件）。新设备一律从离线开始。
+          status: "0",
           copyFromId: id,
         }
         this.open = true

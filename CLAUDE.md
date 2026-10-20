@@ -55,6 +55,18 @@ npm run build:prod   # 生产构建
 npm run build:stage  # 预发构建（--mode staging）
 ```
 
+## 主 tab 页面缓存（keep-alive，2026-10-19 开启）
+
+`src/layout/components/AppMain.vue` 已启用 `<keep-alive :include="cachedViews">`，切换 tabs 不再销毁页面、筛选/滚动等状态保留。生效必须同时满足三点：
+
+1. **组件 `name` 与路由 `name` 完全一致**（区分大小写）。后端路由 name 取 `sys_menu.route_name`，为空则取 `capitalize(path)`（见 `SysMenuServiceImpl#getRouteName`）。已对齐：`Product` / `Device` / `Map` / `DeviceGroup` / `Protocol` / `ComponentList` / `Engine` / `Devicelink` / `ScheduledEngine` / `LinkageRecord`。
+2. **菜单 `is_cache = '0'`**（0=缓存，1=不缓存）。路由 meta 的 `noCache = (is_cache == '1')`，为 true 时不会进 `cachedViews`。本次把 2042/2043/2044/2046/2050 五个菜单从 1 改成了 0。
+3. **不在 `meta.noCache` 白名单里**。详情页（`DeviceDetail` / `ProductDetail` / `ComponentDetail` / `EngineDetail` / `DevicelinkDetail` / `ScheduledEngineDetail`）和首页 `Index` 在 `src/router/index.js` 里显式标了 `noCache: true`：详情页靠 query 区分对象、同一 path 切换会复用实例；首页是实时看板。
+
+⚠️ **不要给组件起名 `Component`** —— Vue 会报 `Do not use built-in or reserved HTML elements as component id: Component`。网络组件页路由名已由后端 `route_name=ComponentList` 指定，组件 name 同步为 `ComponentList`。
+
+⚠️ **改完菜单/路由 name 要刷新页面**：路由由登录后 `getRouters()` 一次性拉取，HMR 不会重新请求。单个缓存页要清状态，用 tab 右键「刷新页面」（走 `/redirect` 并清 `cachedViews`）。
+
 ## 联调配置
 
 - 后端地址：`vue.config.js` 中 `baseUrl = http://127.0.0.1:8085`，开发环境通过 devServer proxy 转发（HTTP `/dev-api` 与 WebSocket `/ws` 均代理到该后端）。
@@ -152,3 +164,4 @@ PLC 寄存器协议不能预置点位表（见下「设计原则」），四个�
 6. **分页列表操作按钮**：`disabled` 和 `loading` 不能用同一个属性控制；每行按钮用行数据唯一标识（如 `row.id`）做独立 loading，避免点一行导致整列按钮同时 loading/disabled。
 7. **表格行内操作按钮**：文字左侧加图标（`el-icon-view` / `el-icon-edit` / `el-icon-delete` 等），用 `size="mini"`，按钮间保持适当间距。
 8. **表单里"后加的属性"必须写进对象字面量**（Vue2 响应式陷阱，网络组件「复制」踩过）：`this.form = { ...data, id: null }` 之后再 `this.form.dynamicConfig = {}` 属于**给已 observe 的对象新增属性** —— Vue2 不为它装 getter/setter，后续所有赋值都不触发重渲染。而 `el-input` 的 `handleInput` 里有 `$nextTick(setNativeInputValue)`，会拿**上一次渲染时的旧 prop 值**写回输入框，于是「其余配置」里刚敲进去的内容下一个 tick 被顶回旧值（模型已更新、输入框回退），要动一下上面任何响应式字段（如组件名称）才同步过来。`component/index.vue` 的 `data()` / `reset()` / `handleUpdate` 都把 `dynamicConfig` 写在字面量里所以没事，只有 `handleCopy` 漏了（2026-10-14 修）。**新增类似的预填/回显逻辑时，子对象一律写在字面量里**。
+9. **「复制」只复制配置，不复制运行时状态**（2026-10-19 修）：`handleCopy` 用 `{...data}` 预填新增表单时，`status` 这类**运行时状态**必须显式重置为 `"0"`——组件 `status`（0 停用 / 1 启用）被带过去，保存走 `add` 接口后端看到 `status="1"` 会立刻尝试建连并启用副本；设备 `status`（0 离线 / 1 在线）被带过去，新设备从没收到过数据、组件也没启动，却会一直显示在线（离线只能由组件掉线事件写库，而它没上线过、不会有这个事件）。新增其他带运行时状态的实体（如规则引擎 `isEnable`）复制时同理。

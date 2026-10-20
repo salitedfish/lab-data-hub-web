@@ -204,7 +204,7 @@ function checkMapContainerExist() {
 }
 
 export default {
-  name: 'DeviceMap',
+  name: 'Map',
   data() {
     return {
       queryParams: { deviceName: '', status: '',productSn:'' },

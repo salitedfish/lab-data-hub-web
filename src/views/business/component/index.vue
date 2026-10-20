@@ -741,7 +741,7 @@ import { CNC_TCP_MODELS } from "@/utils/cncTcpPoints";
 const BATCH_CONCURRENCY = 5;
 
 export default {
-  name: "ComponentView",
+  name: "ComponentList",
   components: { ComponentDetail },
   data() {
     // 端口校验方法
@@ -1569,6 +1569,9 @@ export default {
           ...data,
           id: null,
           name: (data.name || "") + "副本",
+          // 复制出来的组件一律以停用状态创建：status 是运行时状态而不是配置，
+          // 原组件启用时若把它一起复制过去，保存（走新增接口）会立刻尝试建连并直接启用副本。
+          status: "0",
           dynamicConfig: {},
         };
         // 先按原网络类型初始化动态配置默认值（会重置 dynamicConfig）

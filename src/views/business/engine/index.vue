@@ -141,7 +141,7 @@ import {listComponent, getComponent, delComponent, addComponent, updateComponent
 import {addRuleEngine,getRuleEngine,delRuleEngine,updateRuleEngine,listRuleEngine,control} from "@/api/business/ruleEngine";
 
 export default {
-  name: "EngineView",
+  name: "Engine",
   data() {
     return {
       // 遮罩层

@@ -143,7 +143,7 @@
 import {addWarnLinkage,getWarnLinkage,delWarnLinkage,updateWarnLinkage,listWarnLinkage,control} from "@/api/business/warnLinkage";
 
 export default {
-  name: "EngineView",
+  name: "Devicelink",
   data() {
     return {
       // 遮罩层

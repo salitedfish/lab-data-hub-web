@@ -1,9 +1,9 @@
 <template>
   <section class="app-main">
     <transition name="fade-transform" mode="out-in">
-<!--      <keep-alive :include="cachedViews">-->
+      <keep-alive :include="cachedViews">
         <router-view v-if="!$route.meta.link" :key="key" />
-<!--      </keep-alive>-->
+      </keep-alive>
     </transition>
     <iframe-toggle />
     <copyright />

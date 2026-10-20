@@ -139,7 +139,7 @@
 import {addScheduledEngine,getScheduledEngine,delScheduledEngine,updateScheduledEngine,listScheduledEngine,control} from "@/api/business/scheduledEngine";
 
 export default {
-  name: "EngineView",
+  name: "ScheduledEngine",
   data() {
     return {
       // 遮罩层
