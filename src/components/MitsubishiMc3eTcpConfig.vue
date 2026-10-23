@@ -2,7 +2,7 @@
   <div class="modbus-config">
     <div class="tab-content">
       <div class="tab-header">
-        <div class="tab-title">MITSUBISHI_MC3E_TCP配置</div>
+        <div class="tab-title">MITSUBISHI_MC3E 点位配置（TCP / UDP 通用）</div>
         <div class="tab-actions" style="right: 20px" v-if="!isProductIn">
           <span style="font-weight: 800; align-items: center; gap: 4px">
             <!-- 感叹号图标 + 悬浮提示 -->
@@ -77,7 +77,11 @@
             {{ areaCodeName(scope.row.areaCode) }}
           </template>
         </el-table-column>
-        <el-table-column prop="startAddress" label="起始地址" width="180" />
+        <el-table-column prop="startAddress" label="起始地址" width="180">
+          <template slot-scope="scope">
+            {{ formatAddress(scope.row) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="length" label="读取数量" width="180" />
         <el-table-column prop="intervalTime" label="读取间隔(s)" width="180" />
         <el-table-column prop="delayTime" label="读取后延迟(ms)" width="180" />
@@ -158,11 +162,39 @@
             </el-select>
           </el-form-item>
           <el-form-item label="起始地址" prop="startAddress" required>
-            <el-input
-              v-model="mitsubishiMc3eTcpForm.startAddress"
-              type="number"
-              placeholder="请输入起始地址"
-            />
+            <div style="display: flex; align-items: center">
+              <el-input
+                v-model="addressInput"
+                placeholder="如 D150（读一个数值），或 D150.0（读第 0 位通断）"
+                style="flex: 1"
+              />
+              <el-tooltip placement="right-start" effect="dark" :enterable="true" popper-class="mc-hint-popper">
+                <div slot="content" style="line-height: 20px">
+                  <div>
+                    格式：<b>150</b>（只写数字）、<b>D150</b>（字母 + 数字）、<b>D150.0</b>（再加 .位号），字母不区分大小写。
+                  </div>
+                  <div style="margin-top: 6px">
+                    • <b>D150</b>：读第 150 号数据寄存器里的<b>一个 16 位数值</b>。一个寄存器就是一个整数，比如转速、产量这类数。
+                  </div>
+                  <div style="margin-top: 4px">
+                    • <b>D150.0</b>：只看这个 16 位数值里的<b>某一位</b>，读回来是 0 或 1，对应设备上某个开关 / 信号是「断」还是「通」。点后面的数字是位号，<b>只能填 0–15</b>，0 是最低位（把数值写成二进制后最右边那一位）。比如 D150 里存的是 5（二进制 0000 0000 0000 0101），则 D150.0 = 1、D150.1 = 0、D150.2 = 1。
+                  </div>
+                  <div style="margin-top: 4px">
+                    • <b>前面的字母</b>决定软元件类型，填了字母会自动切换上面的「软元件」下拉：D / W / R / ZR / SD 是存数值的「字设备」，M / L / B / X / Y / S / SM / F 是只表示通断的「位设备」。只写数字 150 时，按下拉框选中的类型读。
+                  </div>
+                  <div style="margin-top: 4px">
+                    • <b>D150.0 只能用在 D / W / R / ZR / SD 上</b>：三菱不允许直接按位读这几个区，平台的做法是「先读 1 个字，再取出那一位」，所以读取数量会被锁定为 1。结果按开关量（bool）建，<b>不支持写入</b>。
+                  </div>
+                  <div style="margin-top: 4px">
+                    • <b>一条配置只对应一个采集值</b>：要分别采集 D150、D151、D152，就建 3 条配置、各填一个地址、数量都填 1；数量填 3 不会得到 3 个值，只会把 3 个字拼成一个值。
+                  </div>
+                </div>
+                <i
+                  class="el-icon-question"
+                  style="color: #909399; font-size: 16px; margin-left: 8px; cursor: help"
+                />
+              </el-tooltip>
+            </div>
             <div
               v-if="isOctalArea"
               style="
@@ -176,11 +208,33 @@
             </div>
           </el-form-item>
           <el-form-item label="读取数量" prop="length" required>
-            <el-input
-              v-model="mitsubishiMc3eTcpForm.length"
-              type="number"
-              placeholder="字设备≤960，位设备≤2000"
-            />
+            <div style="display: flex; align-items: center">
+              <el-input
+                v-model="mitsubishiMc3eTcpForm.length"
+                type="number"
+                :disabled="hasBitIndex"
+                placeholder="从起始地址连读几个字，如：1"
+                style="flex: 1"
+              />
+              <el-tooltip placement="right-start" effect="dark" :enterable="true" popper-class="mc-hint-popper">
+                <div slot="content" style="line-height: 20px">
+                  <div>
+                    从起始地址起<b>连续读几个字</b>，不是读几个点位。它决定这个采集值由几个字拼成，怎么拼取决于物模型里的数据类型：
+                  </div>
+                  <div style="margin-top: 6px">• <b>16 位整数、开关量（bool）：填 1</b></div>
+                  <div>• <b>32 位整数 / 32 位浮点：填 2</b></div>
+                  <div>• <b>64 位整数 / 双精度：填 4</b></div>
+                  <div>• 字符串：每 1 个字装 2 个字符，按字符数 ÷ 2 向上取整填（如 10 个字符填 5）</div>
+                  <div style="margin-top: 4px">
+                    • 填了带位号的地址（D150.0）时锁定为 1；上限：字设备 ≤ 960，位设备 ≤ 2000（一帧报文能读的最大范围）
+                  </div>
+                </div>
+                <i
+                  class="el-icon-question"
+                  style="color: #909399; font-size: 16px; margin-left: 8px; cursor: help"
+                />
+              </el-tooltip>
+            </div>
           </el-form-item>
           <el-form-item label="读取间隔(秒)" prop="intervalTime" required>
             <el-input
@@ -271,6 +325,26 @@ export default {
       mitsubishiMc3eTcpIsEdit: false,
       mitsubishiMc3eTcpForm: {},
       mitsubishiMc3eTcpList: [],
+      // 起始地址输入框内容（支持 150 / D150 / D150.0，提交时解析成 areaCode + startAddress + bitIndex）
+      addressInput: "",
+      // 软元件字母前缀 → 软元件代码（与后端 MitsubishiMc3eProtocol 的映射一致）
+      areaCodeMap: {
+        D: 0xa8,
+        W: 0xb4,
+        R: 0xaf,
+        ZR: 0xb0,
+        SD: 0xa9,
+        M: 0x90,
+        L: 0x92,
+        B: 0xa0,
+        X: 0x9c,
+        Y: 0x9d,
+        S: 0x98,
+        SM: 0x91,
+        F: 0x93,
+      },
+      // 字设备（只有字设备支持 D150.0 这种字内位）
+      wordAreaCodes: [0xa8, 0xb4, 0xaf, 0xb0, 0xa9],
     };
   },
   computed: {
@@ -279,6 +353,26 @@ export default {
       return (
         this.mitsubishiMc3eTcpForm.areaCode == 0x9c || this.mitsubishiMc3eTcpForm.areaCode == 0x9d
       );
+    },
+    // 起始地址带 .位号（D150.0）时，读取数量只能是 1（只读这一个字再取位）
+    hasBitIndex() {
+      const parsed = this.parseAddressInput(this.addressInput);
+      return parsed.ok && parsed.bitIndex != null;
+    },
+  },
+  watch: {
+    // 输入地址时就地同步软元件类型；带 .位号 的地址读取数量固定为 1
+    addressInput(val) {
+      const parsed = this.parseAddressInput(val);
+      if (!parsed.ok) {
+        return;
+      }
+      if (parsed.letter) {
+        this.mitsubishiMc3eTcpForm.areaCode = parsed.areaCode;
+      }
+      if (parsed.bitIndex != null) {
+        this.mitsubishiMc3eTcpForm.length = 1;
+      }
     },
   },
   created() {
@@ -328,11 +422,93 @@ export default {
     },
     /** 提交按钮 */
     submitMitsubishiTcpForm() {
-      this.$refs["mitsubishiMc3eTcpForm"].validate((valid) => {
-        if (valid) {
-          this.saveMitsubishiMc3eTcpConfig();
+      const msg = this.validateMitsubishiForm();
+      if (msg) {
+        this.$message.warning(msg);
+        return;
+      }
+      this.saveMitsubishiMc3eTcpConfig();
+    },
+    /**
+     * 解析起始地址：支持 150 / D150 / D150.0
+     * 返回 { ok, msg, letter, address, bitIndex, areaCode }
+     */
+    parseAddressInput(raw) {
+      const text = raw == null ? "" : String(raw).trim().toUpperCase().replace(/\s+/g, "");
+      if (!text) {
+        return { ok: false, msg: "请输入起始地址" };
+      }
+      const match = text.match(/^([A-Z]{1,2})?([0-9]+)(?:\.([0-9]+))?$/);
+      if (!match) {
+        return { ok: false, msg: "起始地址格式不对：支持 150、D150、D150.0" };
+      }
+      const letter = match[1] || "";
+      const address = parseInt(match[2], 10);
+      const bitIndex = match[3] == null ? null : parseInt(match[3], 10);
+      let areaCode = this.mitsubishiMc3eTcpForm.areaCode;
+      if (letter) {
+        if (this.areaCodeMap[letter] == null) {
+          return { ok: false, msg: "不支持的软元件前缀「" + letter + "」" };
         }
-      });
+        areaCode = this.areaCodeMap[letter];
+      }
+      return { ok: true, letter, address, bitIndex, areaCode };
+    },
+    /** 软元件代码 → 字母前缀（未知返回空串） */
+    areaLetter(code) {
+      for (const letter in this.areaCodeMap) {
+        if (this.areaCodeMap[letter] == code) {
+          return letter;
+        }
+      }
+      return "";
+    },
+    /** 列表回显：拼成 D150 / D150.0 这种形式 */
+    formatAddress(row) {
+      if (row == null || row.startAddress == null || row.startAddress === "") {
+        return "";
+      }
+      const base = this.areaLetter(row.areaCode) + row.startAddress;
+      return row.bitIndex != null && row.bitIndex !== "" ? base + "." + row.bitIndex : base;
+    },
+    /** 表单校验（返回空串表示通过） */
+    validateMitsubishiForm() {
+      const form = this.mitsubishiMc3eTcpForm;
+      if (!form.code) {
+        return "请输入标识";
+      }
+      const parsed = this.parseAddressInput(this.addressInput);
+      if (!parsed.ok) {
+        return parsed.msg;
+      }
+      if (parsed.areaCode == null) {
+        return "请选择软元件类型，或输入带字母前缀的地址（如 D150）";
+      }
+      if (parsed.bitIndex != null) {
+        if (this.wordAreaCodes.indexOf(parsed.areaCode) < 0) {
+          return "字内位地址（如 D150.0）只能用于字设备（D/W/R/ZR/SD）";
+        }
+        if (parsed.bitIndex < 0 || parsed.bitIndex > 15) {
+          return "字内位号只能是 0-15，当前为：" + parsed.bitIndex;
+        }
+        form.length = 1;
+      }
+      if (form.length == null || form.length === "" || Number(form.length) <= 0) {
+        return "请输入读取数量";
+      }
+      if (form.intervalTime == null || form.intervalTime === "") {
+        return "请输入读取间隔";
+      }
+      if (form.delayTime == null || form.delayTime === "") {
+        return "请输入读取后延迟";
+      }
+      form.areaCode = parsed.areaCode;
+      form.startAddress = parsed.address;
+      form.bitIndex = parsed.bitIndex;
+      form.length = Number(form.length);
+      form.intervalTime = Number(form.intervalTime);
+      form.delayTime = Number(form.delayTime);
+      return "";
     },
     async saveMitsubishiMc3eTcpConfig() {
       this.submitLoading = true;
@@ -385,10 +561,12 @@ export default {
         createTime: null,
         areaCode: null,
         startAddress: null,
+        bitIndex: null,
         length: null,
         intervalTime: null,
         delayTime: null,
       };
+      this.addressInput = "";
       this.resetForm("mitsubishiMc3eTcpForm");
     },
     resetForm(formName) {
@@ -414,6 +592,7 @@ export default {
           this.mitsubishiMc3eTcpIsEdit = true;
           this.openAddMitsubishiTcp = true;
           this.mitsubishiMc3eTcpForm = res.data;
+          this.addressInput = this.formatAddress(res.data);
         }
       } catch (e) {
         console.error("查询三菱配置失败", e);
@@ -497,5 +676,13 @@ export default {
 
 .drawer-content {
   padding: 20px;
+}
+</style>
+
+<style>
+/* 地址 / 读取数量 的说明气泡：popper 挂在 body 上，scoped 样式管不到，单独定义 */
+.mc-hint-popper {
+  max-width: 420px;
+  line-height: 20px;
 }
 </style>

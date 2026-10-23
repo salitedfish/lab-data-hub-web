@@ -184,6 +184,10 @@
                 value="MITSUBISHI_MC3E_TCP"
               ></el-option>
               <el-option
+                label="MITSUBISHI_MC3E_UDP"
+                value="MITSUBISHI_MC3E_UDP"
+              ></el-option>
+              <el-option
                 label="MITSUBISHI_CNC_TCP"
                 value="MITSUBISHI_CNC_TCP"
               ></el-option>

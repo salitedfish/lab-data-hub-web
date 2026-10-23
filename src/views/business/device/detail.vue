@@ -347,9 +347,12 @@
           />
         </el-tab-pane>
         <el-tab-pane
-          label="Mitsubishi_MC3E_TCP配置"
+          label="Mitsubishi_MC3E配置"
           name="mitsubishiMc3eTcpConfig"
-          v-if="component?.netType == 'MITSUBISHI_MC3E_TCP'"
+          v-if="
+            component?.netType == 'MITSUBISHI_MC3E_TCP' ||
+            component?.netType == 'MITSUBISHI_MC3E_UDP'
+          "
         >
           <MitsubishiMc3eTcpConfig
             :device-sn="device.deviceSn"

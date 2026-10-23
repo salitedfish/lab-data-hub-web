@@ -175,6 +175,13 @@ export default {
       })
     },
     saveConfig() {
+      // 节点面板已无「保存」：产品/设备查询缓存统一在这里清掉，避免把全量列表随流程配置写进库
+      for (const node of this.data.nodeList) {
+        if (node.configData) {
+          if (node.configData.productList) node.configData.productList = null
+          if (node.configData.deviceList) node.configData.deviceList = null
+        }
+      }
       configEngine({id: this.ruleEngine.id, configJson: JSON.stringify(this.data)}).then(res => {
         if (res?.code == 200) {
           this.$message.success("配置成功");

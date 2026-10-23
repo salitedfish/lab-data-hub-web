@@ -1,6 +1,7 @@
 <template>
   <div class="app-container">
     <!-- 搜索区域保持不变 -->
+    <!-- 只有组件名称一个输入框：不加 @submit.native.prevent 的话回车会触发浏览器原生表单提交，整页刷新 -->
     <el-form
       :model="queryParams"
       ref="queryForm"
@@ -8,6 +9,7 @@
       :inline="true"
       v-show="showSearch"
       label-width="68px"
+      @submit.native.prevent
     >
       <el-form-item label="组件名称" prop="name">
         <el-input
@@ -32,7 +34,7 @@
     </el-form>
 
     <el-row :gutter="10" class="mb8">
-      <el-col :span="3">
+      <el-col :span="3" class="select-all-col">
         <el-checkbox
           :value="isAllSelected"
           :indeterminate="isPartialSelected"
@@ -75,6 +77,16 @@
           @click="batchToggleStatus(0)"
           >批量停止
         </el-button>
+      </el-col>
+      <el-col :span="1.5" class="startup-retry-tip-col">
+        <!-- 启动自愈说明：与后端 ComponentStartupRetryer 的行为保持一致（60 秒 / 10 分钟，可在 application.yml 调整），悬停显示 -->
+        <el-tooltip effect="dark" placement="bottom-start">
+          <div
+            slot="content"
+            style="max-width: 380px; line-height: 1.6"
+          >启动自愈：平台重启时会自动开启所有「启用」状态的网络组件；首次连接失败的组件每 60 秒自动重试一次，最长重试 10 分钟，全部开启成功或超时后停止。重试期间手动关闭某个组件，会立即取消对它的重试；超时后仍未开启的组件保持停用，需要手动开启。</div>
+          <i class="el-icon-info startup-retry-icon"></i>
+        </el-tooltip>
       </el-col>
       <el-col :span="6" class="batch-tip-col">
         <!-- 批量进度：请求已在批量接口上补了建连探针，单个组件最长约 3 秒，
@@ -244,6 +256,10 @@
               <el-option
                 label="MITSUBISHI_MC3E_TCP"
                 value="MITSUBISHI_MC3E_TCP"
+              ></el-option>
+              <el-option
+                label="MITSUBISHI_MC3E_UDP"
+                value="MITSUBISHI_MC3E_UDP"
               ></el-option>
               <el-option
                 label="MITSUBISHI_CNC_TCP"
@@ -515,6 +531,7 @@
                   form.netType === 'BROTHER_TCP' ||
                   form.netType === 'FANUC_TCP' ||
                   form.netType === 'MITSUBISHI_MC3E_TCP' ||
+                  form.netType === 'MITSUBISHI_MC3E_UDP' ||
                   form.netType === 'MITSUBISHI_CNC_TCP'
                 "
               >
@@ -527,7 +544,7 @@
                 <el-form-item label="服务器端口" prop="dynamicConfig.port">
                   <el-input
                     v-model="form.dynamicConfig.port"
-                    placeholder="如：三菱 MC 默认 5007 / FANUC 8193 / 三菱CNC 683"
+                    placeholder="如：三菱 MC 默认 5007（UDP 常见 5040，以网关为准）/ FANUC 8193 / 三菱CNC 683"
                   />
                 </el-form-item>
                 <el-form-item label="连接超时(ms)" prop="dynamicConfig.timeout">
@@ -1050,6 +1067,7 @@ export default {
             ],
           };
         case "MITSUBISHI_MC3E_TCP":
+        case "MITSUBISHI_MC3E_UDP":
           return {
             ...baseRules,
             "dynamicConfig.ipAddr": [
@@ -1318,6 +1336,12 @@ export default {
           port: 8193,
         };
       } else if (netType === "MITSUBISHI_MC3E_TCP") {
+        this.form.dynamicConfig = {
+          timeout: 3000,
+          port: 5007,
+        };
+      } else if (netType === "MITSUBISHI_MC3E_UDP") {
+        // UDP 端口以供应商网关为准（现场常见 5040），默认仍给 MC 标准 5007
         this.form.dynamicConfig = {
           timeout: 3000,
           port: 5007,
@@ -1723,6 +1747,26 @@ export default {
 </script>
 
 <style scoped>
+/* 工具栏「全选本页」：复选框自身只有 ~19px 高，和 28px 的 mini 按钮同为顶对齐时文字偏上，用 flex 垂直居中 */
+.select-all-col {
+  display: flex;
+  align-items: center;
+  height: 28px;
+}
+
+/* 启动自愈说明图标：与工具栏按钮同一行、同高居中，悬停才显示说明 */
+.startup-retry-tip-col {
+  display: flex;
+  align-items: center;
+  height: 28px;
+}
+.startup-retry-icon {
+  color: #909399;
+  font-size: 16px;
+  vertical-align: middle;
+  cursor: help;
+}
+
 /* 底部留白：分页条是 fixed 悬浮层，留出足够高度避免最后一行卡片被遮挡 */
 .component-card-container {
   margin-bottom: 100px;
